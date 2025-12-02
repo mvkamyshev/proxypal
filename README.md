@@ -12,7 +12,12 @@ A desktop app that lets you use your AI subscriptions (Claude, ChatGPT, Gemini) 
 
 ## Supported Platforms
 
-Currently only **macOS (Apple Silicon)** is supported. Intel Mac, Windows, and Linux support coming when CLIProxyAPI binaries are available for those platforms.
+| Platform | Architecture          | Status |
+| -------- | --------------------- | ------ |
+| macOS    | Apple Silicon (ARM64) | ✅     |
+| macOS    | Intel (x64)           | ✅     |
+| Windows  | x64                   | ✅     |
+| Linux    | x64 (.deb)            | ✅     |
 
 ## Quick Start
 

@@ -46,15 +46,30 @@ jobs:
         working-directory: src-tauri
 
   build:
-    name: Build (macOS ARM)
+    name: Build (${{ matrix.platform }})
     needs: check
-    runs-on: macos-latest
-    # NOTE: Currently only ARM Mac is supported because CLIProxyAPI binary
-    # is only available for aarch64-apple-darwin. To add more platforms:
-    # 1. Obtain CLIProxyAPI binaries for each target
-    # 2. Name them: cliproxyapi-{target} (e.g., cliproxyapi-x86_64-unknown-linux-gnu)
-    # 3. Place in src-tauri/binaries/
-    # 4. Restore the matrix build configuration
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macOS-ARM
+            os: macos-latest
+            target: aarch64-apple-darwin
+            artifact_path: src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
+          - platform: macOS-Intel
+            os: macos-13
+            target: x86_64-apple-darwin
+            artifact_path: src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg
+          - platform: Linux
+            os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            artifact_path: src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb/*.deb
+          - platform: Windows
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact_path: src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
+
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
 
@@ -72,7 +87,13 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-apple-darwin
+          targets: ${{ matrix.target }}
+
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
       - name: Rust cache
         uses: Swatinem/rust-cache@v2
@@ -87,13 +108,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          args: --target aarch64-apple-darwin
+          args: --target ${{ matrix.target }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: proxypal-aarch64-apple-darwin
-          path: src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
+          name: proxypal-${{ matrix.target }}
+          path: ${{ matrix.artifact_path }}
           if-no-files-found: error
 
   notify:
