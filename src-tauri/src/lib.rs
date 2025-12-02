@@ -1478,7 +1478,7 @@ fn configure_cli_agent(state: State<AppState>, agent_id: String) -> Result<serde
             // Generate shell config for Claude Code
             let shell_config = format!(r#"# ProxyPal - Claude Code Configuration
 export ANTHROPIC_BASE_URL="{}"
-export ANTHROPIC_AUTH_TOKEN="sk-proxypal"
+export ANTHROPIC_AUTH_TOKEN="proxypal-local"
 # For Claude Code 2.x
 export ANTHROPIC_DEFAULT_OPUS_MODEL="claude-opus-4-1-20250805"
 export ANTHROPIC_DEFAULT_SONNET_MODEL="claude-sonnet-4-5-20250929"
@@ -1518,7 +1518,7 @@ wire_api = "responses"
             
             // Write auth.json
             let auth_content = r#"{
-  "OPENAI_API_KEY": "sk-proxypal"
+  "OPENAI_API_KEY": "proxypal-local"
 }"#;
             let auth_path = codex_dir.join("auth.json");
             std::fs::write(&auth_path, auth_content).map_err(|e| e.to_string())?;
@@ -1540,7 +1540,7 @@ export CODE_ASSIST_ENDPOINT="{}"
 
 # Option 2: API Key mode (works with any IP/domain)
 # export GOOGLE_GEMINI_BASE_URL="{}"
-# export GEMINI_API_KEY="sk-proxypal"
+# export GEMINI_API_KEY="proxypal-local"
 "#, endpoint, endpoint);
             
             Ok(serde_json::json!({
@@ -1563,73 +1563,73 @@ export CODE_ASSIST_ENDPOINT="{}"
     {{
       "model": "claude-sonnet-4-5-20250929",
       "base_url": "{}",
-      "api_key": "sk-proxypal",
+      "api_key": "proxypal-local",
       "provider": "anthropic"
     }},
     {{
       "model": "claude-opus-4-1-20250805",
       "base_url": "{}",
-      "api_key": "sk-proxypal",
+      "api_key": "proxypal-local",
       "provider": "anthropic"
     }},
     {{
       "model": "claude-3-5-haiku-20241022",
       "base_url": "{}",
-      "api_key": "sk-proxypal",
+      "api_key": "proxypal-local",
       "provider": "anthropic"
     }},
     {{
       "model": "gpt-5",
       "base_url": "{}/v1",
-      "api_key": "sk-proxypal",
+      "api_key": "proxypal-local",
       "provider": "openai"
     }},
     {{
       "model": "gpt-5-codex",
       "base_url": "{}/v1",
-      "api_key": "sk-proxypal",
+      "api_key": "proxypal-local",
       "provider": "openai"
     }},
     {{
       "model": "o3",
       "base_url": "{}/v1",
-      "api_key": "sk-proxypal",
+      "api_key": "proxypal-local",
       "provider": "openai"
     }},
     {{
       "model": "gemini-2.5-pro",
       "base_url": "{}/v1",
-      "api_key": "sk-proxypal",
+      "api_key": "proxypal-local",
       "provider": "openai"
     }},
     {{
       "model": "gemini-2.5-flash",
       "base_url": "{}/v1",
-      "api_key": "sk-proxypal",
+      "api_key": "proxypal-local",
       "provider": "openai"
     }},
     {{
       "model": "qwen3-coder-plus",
       "base_url": "{}/v1",
-      "api_key": "sk-proxypal",
+      "api_key": "proxypal-local",
       "provider": "openai"
     }},
     {{
       "model": "qwen-coder-plus",
       "base_url": "{}/v1",
-      "api_key": "sk-proxypal",
+      "api_key": "proxypal-local",
       "provider": "openai"
     }},
     {{
       "model": "deepseek-r1",
       "base_url": "{}/v1",
-      "api_key": "sk-proxypal",
+      "api_key": "proxypal-local",
       "provider": "openai"
     }},
     {{
       "model": "deepseek-v3",
       "base_url": "{}/v1",
-      "api_key": "sk-proxypal",
+      "api_key": "proxypal-local",
       "provider": "openai"
     }}
   ]
@@ -1690,7 +1690,7 @@ export AMP_URL="{}"
                         "name": "ProxyPal (Local Proxy)",
                         "options": {
                             "baseURL": endpoint_v1,
-                            "apiKey": "sk-proxypal"
+                            "apiKey": "proxypal-local"
                         },
                         "models": {
                             // Claude models (via CLIProxyAPI)
