@@ -2,7 +2,13 @@ import { createSignal, For, Show, createEffect } from "solid-js";
 import { Button, Switch } from "../components/ui";
 import { appStore } from "../stores/app";
 import { toastStore } from "../stores/toast";
-import { saveConfig, AMP_MODEL_SLOTS, testOpenAIProvider } from "../lib/tauri";
+import {
+  saveConfig,
+  AMP_MODEL_SLOTS,
+  testOpenAIProvider,
+  getAvailableModels,
+  type AvailableModel,
+} from "../lib/tauri";
 import type {
   AmpOpenAIModel,
   AmpOpenAIProvider,
@@ -32,6 +38,27 @@ export function SettingsPage() {
   const [testingProvider, setTestingProvider] = createSignal(false);
   const [providerTestResult, setProviderTestResult] =
     createSignal<ProviderTestResult | null>(null);
+
+  // Available models from proxy (real-time)
+  const [availableModels, setAvailableModels] = createSignal<AvailableModel[]>(
+    [],
+  );
+
+  // Fetch available models when proxy is running
+  createEffect(async () => {
+    const proxyRunning = appStore.proxyStatus().running;
+    if (proxyRunning) {
+      try {
+        const models = await getAvailableModels();
+        setAvailableModels(models);
+      } catch (error) {
+        console.error("Failed to fetch available models:", error);
+        setAvailableModels([]);
+      }
+    } else {
+      setAvailableModels([]);
+    }
+  });
 
   // Test connection to the custom OpenAI provider
   const testProviderConnection = async () => {
@@ -220,48 +247,7 @@ export function SettingsPage() {
     }
   };
 
-  // Built-in models organized by provider
-  // These are models available through CLIProxyAPI's standard providers
-  const BUILTIN_MODELS = {
-    anthropic: [
-      { value: "claude-opus-4-5-20250514", label: "Claude Opus 4.5" },
-      { value: "claude-sonnet-4-5-20250514", label: "Claude Sonnet 4.5" },
-      { value: "claude-haiku-4-5-20250514", label: "Claude Haiku 4.5" },
-      { value: "claude-sonnet-4-20250514", label: "Claude Sonnet 4" },
-      { value: "claude-3-5-sonnet-20241022", label: "Claude 3.5 Sonnet" },
-      { value: "claude-3-5-haiku-20241022", label: "Claude 3.5 Haiku" },
-    ],
-    google: [
-      { value: "gemini-2.5-pro", label: "Gemini 2.5 Pro" },
-      { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash" },
-      { value: "gemini-2.0-flash", label: "Gemini 2.0 Flash" },
-      {
-        value: "gemini-2.0-flash-thinking-exp",
-        label: "Gemini 2.0 Flash Thinking",
-      },
-      { value: "gemini-1.5-pro", label: "Gemini 1.5 Pro" },
-      { value: "gemini-1.5-flash", label: "Gemini 1.5 Flash" },
-    ],
-    openai: [
-      { value: "gpt-5.1", label: "GPT-5.1" },
-      { value: "gpt-5.1-mini", label: "GPT-5.1 Mini" },
-      { value: "gpt-4.1", label: "GPT-4.1" },
-      { value: "gpt-4.1-mini", label: "GPT-4.1 Mini" },
-      { value: "gpt-4o", label: "GPT-4o" },
-      { value: "gpt-4o-mini", label: "GPT-4o Mini" },
-      { value: "o3", label: "o3" },
-      { value: "o3-mini", label: "o3 Mini" },
-      { value: "o4-mini", label: "o4 Mini" },
-    ],
-    qwen: [
-      { value: "qwen3-235b-a22b", label: "Qwen3 235B" },
-      { value: "qwen3-32b", label: "Qwen3 32B" },
-      { value: "qwen-coder-plus", label: "Qwen Coder Plus" },
-      { value: "qwen-plus", label: "Qwen Plus" },
-    ],
-  };
-
-  // Get list of available target models (from OpenAI provider aliases + built-in models)
+  // Get list of available target models (from OpenAI provider aliases + real available models)
   const getAvailableTargetModels = () => {
     const customModels: { value: string; label: string }[] = [];
 
@@ -283,7 +269,24 @@ export function SettingsPage() {
       }
     }
 
-    return { customModels, builtInModels: BUILTIN_MODELS };
+    // Group real available models by provider
+    const models = availableModels();
+    const groupedModels = {
+      anthropic: models
+        .filter((m) => m.ownedBy === "anthropic")
+        .map((m) => ({ value: m.id, label: m.id })),
+      google: models
+        .filter((m) => m.ownedBy === "google")
+        .map((m) => ({ value: m.id, label: m.id })),
+      openai: models
+        .filter((m) => m.ownedBy === "openai")
+        .map((m) => ({ value: m.id, label: m.id })),
+      qwen: models
+        .filter((m) => m.ownedBy === "qwen")
+        .map((m) => ({ value: m.id, label: m.id })),
+    };
+
+    return { customModels, builtInModels: groupedModels };
   };
 
   const handleConfigChange = async (
