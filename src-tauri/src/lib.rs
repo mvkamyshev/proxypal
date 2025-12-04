@@ -421,11 +421,10 @@ async fn start_proxy(
         format!("  upstream-api-key: \"{}\"", config.amp_api_key)
     };
     
-    // Build amp model-mappings section if configured (for ampcode mode)
-    let amp_model_mappings_section = if config.amp_routing_mode == "openai" {
-        // In openai mode, we don't use ampcode model-mappings
-        "  # model-mappings: (using openai-compatibility mode instead)".to_string()
-    } else if config.amp_model_mappings.is_empty() {
+    // Build amp model-mappings section if configured
+    // Model mappings route Amp model requests to other models available in the proxy
+    // (e.g., from: claude-opus-4-5-20251101 -> to: copilot-gpt-5-mini)
+    let amp_model_mappings_section = if config.amp_model_mappings.is_empty() {
         "  # model-mappings:  # Optional: map Amp model requests to different models\n  #   - from: claude-opus-4-5-20251101\n  #     to: your-preferred-model".to_string()
     } else {
         let mut mappings = String::from("  model-mappings:");
@@ -435,25 +434,27 @@ async fn start_proxy(
         mappings
     };
     
-    // Build openai-compatibility section for Amp routing (alternative to model-mappings)
-    let openai_compat_section = if config.amp_routing_mode == "openai" {
-        if let Some(ref provider) = config.amp_openai_provider {
-            let mut section = String::from("\n# OpenAI-compatible provider for Amp model routing\nopenai-compatibility:\n");
-            section.push_str(&format!("  - name: {}\n", provider.name));
-            section.push_str(&format!("    base-url: {}\n", provider.base_url));
+    // Build openai-compatibility section for custom providers
+    // This defines OpenAI-compatible providers with custom base URLs and model aliases
+    // The aliases can then be used as targets in amp model-mappings
+    let openai_compat_section = if let Some(ref provider) = config.amp_openai_provider {
+        if !provider.name.is_empty() && !provider.base_url.is_empty() && !provider.api_key.is_empty() {
+            let mut section = String::from("# OpenAI-compatible provider (custom endpoint)\nopenai-compatibility:\n");
+            section.push_str(&format!("  - name: \"{}\"\n", provider.name));
+            section.push_str(&format!("    base-url: \"{}\"\n", provider.base_url));
             section.push_str("    api-key-entries:\n");
-            section.push_str(&format!("      - api-key: {}\n", provider.api_key));
+            section.push_str(&format!("      - api-key: \"{}\"\n", provider.api_key));
             
             if !provider.models.is_empty() {
                 section.push_str("    models:\n");
                 for model in &provider.models {
-                    if model.alias.is_empty() {
-                        section.push_str(&format!("      - name: {}\n", model.name));
-                    } else {
-                        section.push_str(&format!("      - name: {}\n        alias: {}\n", model.name, model.alias));
+                    section.push_str(&format!("      - name: \"{}\"\n", model.name));
+                    if !model.alias.is_empty() {
+                        section.push_str(&format!("        alias: \"{}\"\n", model.alias));
                     }
                 }
             }
+            section.push('\n');
             section
         } else {
             String::new()
@@ -486,7 +487,7 @@ remote-management:
   secret-key: "proxypal-mgmt-key"
   disable-control-panel: true
 
-# Amp CLI Integration - enables amp login and management routes
+{}# Amp CLI Integration - enables amp login and management routes
 # See: https://help.router-for.me/agent-client/amp-cli.html
 # Get API key from: https://ampcode.com/settings
 ampcode:
@@ -494,7 +495,6 @@ ampcode:
 {}
 {}
   restrict-management-to-localhost: true
-{}
 "#,
         config.port,
         config.debug,
@@ -504,9 +504,9 @@ ampcode:
         proxy_url_line,
         config.quota_switch_project,
         config.quota_switch_preview_model,
+        openai_compat_section,
         amp_api_key_line,
-        amp_model_mappings_section,
-        openai_compat_section
+        amp_model_mappings_section
     );
     
     std::fs::write(&proxy_config_path, proxy_config).map_err(|e| e.to_string())?;
