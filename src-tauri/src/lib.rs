@@ -1056,7 +1056,7 @@ ampcode:
   upstream-url: "https://ampcode.com"
 {}
 {}
-  restrict-management-to-localhost: true
+  restrict-management-to-localhost: false
 "#,
         config.port,
         config.debug,
