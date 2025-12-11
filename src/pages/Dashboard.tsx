@@ -607,6 +607,23 @@ export function DashboardPage() {
 	// Agent handlers
 	const configuredAgents = () => agents().filter((a) => a.configured);
 
+	// Simple timeout helper so UI never hangs indefinitely
+	const withTimeout = async <T,>(
+		promise: Promise<T>,
+		ms: number,
+		label: string,
+	): Promise<T> => {
+		return Promise.race([
+			promise,
+			new Promise<T>((_, reject) =>
+				setTimeout(
+					() => reject(new Error(`${label} timed out after ${ms}ms`)),
+					ms,
+				),
+			),
+		]);
+	};
+
 	const handleConfigureAgent = async (agentId: string) => {
 		// Agents that need models from the proxy (they configure with available model list)
 		const agentsNeedingModels = ["factory-droid", "opencode"];
@@ -624,7 +641,11 @@ export function DashboardPage() {
 			// Fetch available models only for agents that need them
 			let models: AvailableModel[] = [];
 			if (needsModels) {
-				models = await getAvailableModels();
+				models = await withTimeout(
+					getAvailableModels(),
+					15000,
+					"Fetching available models",
+				);
 				if (models.length === 0) {
 					toastStore.warning(
 						"No models available",
@@ -633,7 +654,11 @@ export function DashboardPage() {
 					return;
 				}
 			}
-			const result = await configureCliAgent(agentId, models);
+			const result = await withTimeout(
+				configureCliAgent(agentId, models),
+				15000,
+				"Configuring agent",
+			);
 			const agent = agents().find((a) => a.id === agentId);
 			if (result.success) {
 				setConfigResult({
@@ -641,7 +666,7 @@ export function DashboardPage() {
 					agentName: agent?.name || agentId,
 					models, // Store models for display in modal
 				});
-				await loadAgents();
+				await withTimeout(loadAgents(), 15000, "Refreshing agents");
 				toastStore.success(`${agent?.name || agentId} configured!`);
 			}
 		} catch (error) {
