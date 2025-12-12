@@ -1476,57 +1476,69 @@ async fn start_copilot(
         }
     });
     
-    // Give it a moment to start, then poll for authentication
-    // copilot-api typically takes 5-15 seconds to fully authenticate on first run
-    // We poll for up to 30 seconds to ensure we catch slower authentication
-    let mut authenticated = false;
-    for i in 0..60 {
-        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+    // Return immediately with "running but not authenticated" status
+    // The UI will receive authentication updates via copilot-status-changed events
+    // This prevents the UI from freezing while waiting for copilot-api to start
+    let initial_status = state.copilot_status.lock().unwrap().clone();
+    let _ = app.emit("copilot-status-changed", initial_status.clone());
+    
+    // Spawn background task to poll for authentication
+    // This runs independently and emits status updates as authentication completes
+    let app_handle = app.clone();
+    tauri::async_runtime::spawn(async move {
+        let client = reqwest::Client::new();
+        let health_url = format!("http://127.0.0.1:{}/v1/models", port);
         
-        // Check if stdout listener already detected authentication
-        {
-            let status = state.copilot_status.lock().unwrap();
-            if status.authenticated {
-                println!("✓ Copilot authenticated via stdout detection at {:.1}s", i as f32 * 0.5);
-                authenticated = true;
-                break;
+        // Poll for up to 60 seconds to catch slower authentication (especially on first run)
+        for i in 0..120 {
+            tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+            
+            // Check if stdout listener already detected authentication
+            if let Some(state) = app_handle.try_state::<AppState>() {
+                let status = state.copilot_status.lock().unwrap();
+                if status.authenticated {
+                    println!("✓ Copilot authenticated via stdout detection at {:.1}s", i as f32 * 0.5);
+                    return;
+                }
+                // If process stopped, exit polling
+                if !status.running {
+                    println!("⚠ Copilot process stopped, ending auth poll");
+                    return;
+                }
+            }
+            
+            // Also check health endpoint
+            if let Ok(response) = client
+                .get(&health_url)
+                .timeout(std::time::Duration::from_secs(2))
+                .send()
+                .await
+            {
+                if response.status().is_success() {
+                    println!("✓ Copilot authenticated via health check at {:.1}s", i as f32 * 0.5);
+                    // Update status
+                    if let Some(state) = app_handle.try_state::<AppState>() {
+                        let new_status = {
+                            let mut status = state.copilot_status.lock().unwrap();
+                            status.authenticated = true;
+                            status.clone()
+                        };
+                        let _ = app_handle.emit("copilot-status-changed", new_status);
+                    }
+                    return;
+                }
+            }
+            
+            // Log progress every 10 seconds
+            if i > 0 && i % 20 == 0 {
+                println!("⏳ Waiting for Copilot authentication... ({:.0}s elapsed)", i as f32 * 0.5);
             }
         }
         
-        // Also check health endpoint
-        if let Ok(response) = client
-            .get(&health_url)
-            .timeout(std::time::Duration::from_secs(2))
-            .send()
-            .await
-        {
-            if response.status().is_success() {
-                println!("✓ Copilot authenticated via health check at {:.1}s", i as f32 * 0.5);
-                authenticated = true;
-                break;
-            }
-        }
-        
-        // Log progress every 5 seconds
-        if i > 0 && i % 10 == 0 {
-            println!("⏳ Waiting for Copilot authentication... ({:.0}s elapsed)", i as f32 * 0.5);
-        }
-    }
+        println!("⚠ Copilot authentication poll timed out after 60s - user may need to complete GitHub auth manually");
+    });
     
-    // Update status - only upgrade authenticated status, don't downgrade
-    // (stdout listener may have already set authenticated = true)
-    let new_status = {
-        let mut status = state.copilot_status.lock().unwrap();
-        if authenticated && !status.authenticated {
-            status.authenticated = true;
-        }
-        status.clone()
-    };
-    
-    // Emit status update
-    let _ = app.emit("copilot-status-changed", new_status.clone());
-    
-    Ok(new_status)
+    Ok(initial_status)
 }
 
 #[tauri::command]
