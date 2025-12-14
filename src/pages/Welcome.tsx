@@ -77,6 +77,22 @@ export function WelcomePage() {
 				const status = await startProxy();
 				setProxyStatus(status);
 				toastStore.success("Proxy started", `Listening on port ${status.port}`);
+				// Wait for Management API to be ready (poll with retries)
+				const maxRetries = 10;
+				for (let i = 0; i < maxRetries; i++) {
+					try {
+						const res = await fetch(
+							`http://localhost:${status.port}/v1/models`,
+						);
+						if (res.ok) break;
+					} catch {
+						// Ignore fetch errors, just retry
+					}
+					if (i === maxRetries - 1) {
+						throw new Error("Proxy API not ready after startup");
+					}
+					await new Promise((resolve) => setTimeout(resolve, 200));
+				}
 			} catch (error) {
 				console.error("Failed to start proxy:", error);
 				toastStore.error("Failed to start proxy", String(error));

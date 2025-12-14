@@ -817,6 +817,7 @@ async fn start_proxy(
     {
         let mut process = state.proxy_process.lock().unwrap();
         if let Some(child) = process.take() {
+            println!("[ProxyPal] Killing tracked proxy process");
             let _ = child.kill(); // Ignore errors, process might already be dead
         }
     }
@@ -825,21 +826,33 @@ async fn start_proxy(
     let port = config.port;
     #[cfg(unix)]
     {
-        // Use lsof to find and kill any process using the port
+        // Kill by port
+        println!("[ProxyPal] Killing any process on port {}", port);
         let _ = std::process::Command::new("sh")
-            .args(["-c", &format!("lsof -ti :{} | xargs -r kill -9 2>/dev/null", port)])
+            .args(["-c", &format!("lsof -ti :{} | xargs kill -9 2>/dev/null", port)])
+            .output();
+        
+        // Also kill any orphaned cliproxyapi processes by name
+        println!("[ProxyPal] Killing any orphaned cliproxyapi processes");
+        let _ = std::process::Command::new("sh")
+            .args(["-c", "pkill -9 -f cliproxyapi 2>/dev/null"])
             .output();
     }
     #[cfg(windows)]
     {
-        // On Windows, use netstat and taskkill
+        // On Windows, use netstat and taskkill for port
         let _ = std::process::Command::new("cmd")
             .args(["/C", &format!("for /f \"tokens=5\" %a in ('netstat -aon ^| findstr :{} ^| findstr LISTENING') do taskkill /F /PID %a 2>nul", port)])
             .output();
+        
+        // Also kill by process name on Windows
+        let _ = std::process::Command::new("cmd")
+            .args(["/C", "taskkill /F /IM cliproxyapi*.exe 2>nul"])
+            .output();
     }
 
-    // Small delay to let port be released
-    tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
+    // Longer delay to ensure port is fully released
+    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
 
     // Create config directory and config file for CLIProxyAPI
     let config_dir = dirs::config_dir()
@@ -1290,12 +1303,28 @@ async fn stop_proxy(
     // Stop the log watcher
     state.log_watcher_running.store(false, Ordering::SeqCst);
 
-    // Kill the child process
+    // Kill the tracked child process
     {
         let mut process = state.proxy_process.lock().unwrap();
         if let Some(child) = process.take() {
-            child.kill().map_err(|e| format!("Failed to kill process: {}", e))?;
+            println!("[ProxyPal] Killing tracked proxy process");
+            let _ = child.kill();
         }
+    }
+
+    // Also kill any orphaned cliproxyapi processes by name (belt and suspenders)
+    #[cfg(unix)]
+    {
+        println!("[ProxyPal] Cleaning up any orphaned cliproxyapi processes");
+        let _ = std::process::Command::new("sh")
+            .args(["-c", "pkill -9 -f cliproxyapi 2>/dev/null"])
+            .output();
+    }
+    #[cfg(windows)]
+    {
+        let _ = std::process::Command::new("cmd")
+            .args(["/C", "taskkill /F /IM cliproxyapi*.exe 2>nul"])
+            .output();
     }
 
     // Update status
@@ -5817,6 +5846,21 @@ fn get_tool_setup_info(tool_id: String, state: State<AppState>) -> Result<serde_
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Clean up any orphaned cliproxyapi processes from previous crashes
+    #[cfg(unix)]
+    {
+        println!("[ProxyPal] Cleaning up orphaned cliproxyapi processes on startup");
+        let _ = std::process::Command::new("sh")
+            .args(["-c", "pkill -9 -f cliproxyapi 2>/dev/null"])
+            .output();
+    }
+    #[cfg(windows)]
+    {
+        let _ = std::process::Command::new("cmd")
+            .args(["/C", "taskkill /F /IM cliproxyapi*.exe 2>nul"])
+            .output();
+    }
+
     // Load persisted config and auth
     let config = load_config();
     let auth = load_auth_status();
