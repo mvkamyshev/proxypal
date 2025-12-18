@@ -2423,6 +2423,13 @@ fn add_request_to_history(request: RequestLog) -> Result<RequestHistory, String>
     // Check if request with same ID already exists to prevent duplicates
     if !history.requests.iter().any(|r| r.id == request.id) {
         history.requests.push(request);
+        
+        // Trim to prevent unbounded growth (keep last 500 requests)
+        const MAX_HISTORY_SIZE: usize = 500;
+        if history.requests.len() > MAX_HISTORY_SIZE {
+            let excess = history.requests.len() - MAX_HISTORY_SIZE;
+            history.requests.drain(0..excess);
+        }
     }
     
     // Save
@@ -6192,6 +6199,9 @@ pub fn run() {
                 tauri::RunEvent::ExitRequested { .. } => {
                     // Cleanup: Kill proxy and copilot processes before exit
                     if let Some(state) = app_handle.try_state::<AppState>() {
+                        // Stop log watcher thread
+                        state.log_watcher_running.store(false, Ordering::SeqCst);
+                        
                         // Kill cliproxyapi process
                         if let Ok(mut process_guard) = state.proxy_process.lock() {
                             if let Some(child) = process_guard.take() {
