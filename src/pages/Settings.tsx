@@ -2546,6 +2546,32 @@ export function SettingsPage() {
 								}
 							/>
 
+							<Show when={config().loggingToFile}>
+								<div class="flex items-center justify-between">
+									<div class="flex-1">
+										<span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+											Max Log Size (MB)
+										</span>
+										<p class="text-xs text-gray-500 dark:text-gray-400">
+											Maximum total size of log files before rotation
+										</p>
+									</div>
+									<input
+										type="number"
+										min="10"
+										max="1000"
+										value={config().logsMaxTotalSizeMb || 100}
+										onChange={(e) =>
+											handleConfigChange(
+												"logsMaxTotalSizeMb",
+												parseInt(e.currentTarget.value) || 100,
+											)
+										}
+										class="w-24 px-3 py-1.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-right focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+									/>
+								</div>
+							</Show>
+
 							<Show when={appStore.proxyStatus().running}>
 								<div class="border-t border-gray-200 dark:border-gray-700" />
 
@@ -3579,7 +3605,7 @@ export function SettingsPage() {
 								ProxyPal
 							</h3>
 							<p class="text-sm text-gray-500 dark:text-gray-400">
-								Version 0.1.74
+								Version 0.1.75
 							</p>
 							<p class="text-xs text-gray-400 dark:text-gray-500 mt-2">
 								Built with love by OpenCodeKit

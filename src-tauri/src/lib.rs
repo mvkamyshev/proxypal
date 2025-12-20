@@ -104,6 +104,8 @@ pub struct AppConfig {
     pub request_logging: bool,
     #[serde(default)]
     pub logging_to_file: bool,
+    #[serde(default = "default_logs_max_total_size_mb")]
+    pub logs_max_total_size_mb: u32,
     #[serde(default = "default_config_version")]
     pub config_version: u8,
     #[serde(default)]
@@ -157,6 +159,10 @@ fn default_close_to_tray() -> bool {
 
 fn default_usage_stats_enabled() -> bool {
     true
+}
+
+fn default_logs_max_total_size_mb() -> u32 {
+    100 // Default 100MB max log size
 }
 
 fn default_config_version() -> u8 {
@@ -272,6 +278,7 @@ impl Default for AppConfig {
             usage_stats_enabled: true,
             request_logging: true,
             logging_to_file: true,
+            logs_max_total_size_mb: 100,
             config_version: 1,
             amp_api_key: String::new(),
             amp_model_mappings: Vec::new(),
@@ -1166,6 +1173,7 @@ api-keys:
 debug: {}
 usage-statistics-enabled: {}
 logging-to-file: {}
+logs-max-total-size-mb: {}
 request-retry: {}
 {}
 # Quota exceeded behavior
@@ -1193,6 +1201,7 @@ ampcode:
         config.debug,
         config.usage_stats_enabled,
         config.logging_to_file,
+        config.logs_max_total_size_mb,
         config.request_retry,
         proxy_url_line,
         config.quota_switch_project,

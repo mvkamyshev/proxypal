@@ -274,6 +274,7 @@ export interface AppConfig {
 	usageStatsEnabled: boolean;
 	requestLogging: boolean;
 	loggingToFile: boolean;
+	logsMaxTotalSizeMb: number;
 	ampApiKey: string;
 	ampModelMappings: AmpModelMapping[];
 	ampOpenaiProvider?: AmpOpenAIProvider; // Deprecated: for migration only
