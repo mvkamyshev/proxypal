@@ -4387,7 +4387,7 @@ async fn toggle_auth_file(state: State<'_, AppState>, file_id: String, disabled:
 #[tauri::command]
 async fn download_auth_file(state: State<'_, AppState>, file_id: String, filename: String) -> Result<String, String> {
     let port = state.config.lock().unwrap().port;
-    let url = format!("{}?id={}", get_management_url(port, "auth-files/download"), file_id);
+    let url = format!("{}?name={}", get_management_url(port, "auth-files/download"), filename);
     
     let client = build_management_client();
     let response = client
