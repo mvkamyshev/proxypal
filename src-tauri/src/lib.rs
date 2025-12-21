@@ -2945,9 +2945,9 @@ fn check_env_configured(var: &str, expected_prefix: &str) -> bool {
         .unwrap_or(false)
 }
 
-// Get model context/output limits based on model ID and provider
+// Get model context/output limits based on model ID, provider, and source
 // Source: https://models.dev (sst/models.dev repo)
-fn get_model_limits(model_id: &str, owned_by: &str) -> (u64, u64) {
+fn get_model_limits(model_id: &str, owned_by: &str, source: &str) -> (u64, u64) {
     // Return (context_limit, output_limit)
     // First check model_id patterns (handles Antigravity/proxied models like gemini-claude-*)
     let model_lower = model_id.to_lowercase();
@@ -2975,8 +2975,16 @@ fn get_model_limits(model_id: &str, owned_by: &str) -> (u64, u64) {
         // o1, o3 reasoning models: 200K context, 100K output
         if model_lower.contains("o3") || model_lower.contains("o1") {
             return (200000, 100000);
+        } else if model_lower.contains("gpt-5") || model_lower.contains("gpt5") {
+            // GPT-5 via Copilot: 128K context (Copilot limit)
+            // GPT-5 via ChatGPT/ProxyPal: 400K context
+            if source == "copilot" {
+                return (128000, 32768);
+            } else {
+                return (400000, 32768);
+            }
         } else {
-            // gpt-4o, gpt-4o-mini: 128K context, 16K output
+            // gpt-4o, gpt-4o-mini, gpt-4.1: 128K context, 16K output
             return (128000, 16384);
         }
     }
@@ -3512,7 +3520,7 @@ export AMP_API_KEY="proxypal-local"
             };
             
             for m in &models {
-                let (context_limit, output_limit) = get_model_limits(&m.id, &m.owned_by);
+                let (context_limit, output_limit) = get_model_limits(&m.id, &m.owned_by, &m.source);
                 let display_name = get_model_display_name(&m.id, &m.owned_by, &m.source);
                 // Enable reasoning display for models with "-thinking" suffix
                 let is_thinking_model = m.id.ends_with("-thinking");
