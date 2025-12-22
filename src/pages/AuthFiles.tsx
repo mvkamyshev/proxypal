@@ -29,6 +29,7 @@ const providerColors: Record<string, string> = {
 const providerIcons: Record<string, string> = {
 	claude: "/logos/claude.svg",
 	gemini: "/logos/gemini.svg",
+	"gemini-cli": "/logos/gemini.svg",
 	codex: "/logos/openai.svg",
 	qwen: "/logos/qwen.svg",
 	iflow: "/logos/iflow.svg",
@@ -297,7 +298,11 @@ export function AuthFilesPage() {
 											}`}
 										>
 											<img
-												src={providerIcons[provider] || "/logos/openai.svg"}
+												src={
+													providerIcons[provider] ||
+													providerIcons[provider.toLowerCase()] ||
+													"/logos/openai.svg"
+												}
 												alt={provider}
 												class="w-4 h-4"
 											/>
@@ -361,6 +366,7 @@ export function AuthFilesPage() {
 														<img
 															src={
 																providerIcons[file.provider.toLowerCase()] ||
+																providerIcons[file.provider] ||
 																"/logos/openai.svg"
 															}
 															alt={file.provider}
