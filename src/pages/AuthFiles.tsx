@@ -163,7 +163,7 @@ export function AuthFilesPage() {
 	};
 
 	return (
-		<div class="min-h-screen flex flex-col">
+		<div class="min-h-screen flex flex-col bg-white dark:bg-gray-900">
 			{/* Header */}
 			<header class="sticky top-0 z-10 px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
 				<div class="flex items-center justify-between">
@@ -248,8 +248,8 @@ export function AuthFilesPage() {
 			</header>
 
 			{/* Content */}
-			<main class="flex-1 p-4 sm:p-6 overflow-y-auto">
-				<div class="max-w-2xl mx-auto">
+			<main class="flex-1 p-4 sm:p-6 overflow-y-auto flex flex-col">
+				<div class="flex-1 flex flex-col max-w-2xl mx-auto w-full">
 					{/* Proxy not running warning */}
 					<Show when={!proxyStatus().running}>
 						<EmptyState

@@ -464,7 +464,7 @@ export function ApiKeysPage() {
 	};
 
 	return (
-		<div class="min-h-screen flex flex-col">
+		<div class="min-h-screen flex flex-col bg-white dark:bg-gray-900">
 			{/* Header */}
 			<header class="sticky top-0 z-10 px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
 				<div class="flex items-center gap-2 sm:gap-3">
@@ -544,7 +544,7 @@ export function ApiKeysPage() {
 			</Show>
 
 			{/* Main content */}
-			<main class="flex-1 p-4 sm:p-6 overflow-y-auto">
+			<main class="flex-1 p-4 sm:p-6 overflow-y-auto flex flex-col">
 				<div class="max-w-2xl mx-auto space-y-4 sm:space-y-6">
 					{/* Tabs */}
 					<div class="flex gap-1 p-1 rounded-xl bg-gray-100 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">

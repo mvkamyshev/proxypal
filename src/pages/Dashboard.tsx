@@ -471,7 +471,7 @@ export function DashboardPage() {
 	};
 
 	return (
-		<div class="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
+		<div class="min-h-screen flex flex-col bg-white dark:bg-gray-900">
 			{/* Header - Simplified (navigation handled by sidebar) */}
 			<header class="sticky top-0 z-10 px-4 sm:px-6 py-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
 				<div class="flex items-center justify-between max-w-3xl mx-auto">
@@ -511,7 +511,7 @@ export function DashboardPage() {
 			</header>
 
 			{/* Main content */}
-			<main class="flex-1 p-4 sm:p-6 overflow-y-auto">
+			<main class="flex-1 p-4 sm:p-6 overflow-y-auto flex flex-col">
 				<div class="max-w-3xl mx-auto space-y-4">
 					{/* === OpenCodeKit Banner === */}
 					<OpenCodeKitBanner />

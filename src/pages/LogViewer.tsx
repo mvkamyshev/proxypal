@@ -258,7 +258,7 @@ export function LogViewerPage() {
 	};
 
 	return (
-		<div class="min-h-screen flex flex-col">
+		<div class="min-h-screen flex flex-col bg-white dark:bg-gray-900">
 			{/* Header */}
 			<header class="sticky top-0 z-10 px-4 sm:px-6 py-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
 				<div class="flex items-center justify-between">

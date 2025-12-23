@@ -82,6 +82,7 @@ function createAppStore() {
 	>("welcome");
 	const [isLoading, setIsLoading] = createSignal(false);
 	const [isInitialized, setIsInitialized] = createSignal(false);
+	const [sidebarExpanded, setSidebarExpanded] = createSignal(false);
 
 	// Proxy uptime tracking
 	const [proxyStartTime, setProxyStartTime] = createSignal<number | null>(null);
@@ -237,6 +238,8 @@ function createAppStore() {
 		isLoading,
 		setIsLoading,
 		isInitialized,
+		sidebarExpanded,
+		setSidebarExpanded,
 
 		// Actions
 		initialize,

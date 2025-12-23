@@ -3002,8 +3002,9 @@ export function SettingsPage() {
 
 						<div class="space-y-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
 							<p class="text-xs text-gray-500 dark:text-gray-400">
-								Check if Node.js and copilot-api are detected on your system.
-								This helps diagnose Copilot startup issues.
+								ProxyPal automatically detects and uses copilot-api for GitHub
+								Copilot integration. No manual setup required - it works
+								automatically.
 							</p>
 
 							<Button
@@ -3012,7 +3013,7 @@ export function SettingsPage() {
 								onClick={runCopilotDetection}
 								disabled={detectingCopilot()}
 							>
-								{detectingCopilot() ? "Detecting..." : "Run Detection"}
+								{detectingCopilot() ? "Detecting..." : "Check System"}
 							</Button>
 
 							<Show when={copilotDetection()}>
@@ -3038,23 +3039,33 @@ export function SettingsPage() {
 
 										<div class="flex items-center gap-2">
 											<span
-												class={`w-2 h-2 rounded-full ${detection().installed ? "bg-green-500" : "bg-yellow-500"}`}
+												class={`w-2 h-2 rounded-full ${detection().installed ? "bg-green-500" : "bg-blue-500"}`}
 											/>
 											<span class="font-medium">copilot-api:</span>
 											<span
 												class={
 													detection().installed
 														? "text-green-600 dark:text-green-400"
-														: "text-yellow-600 dark:text-yellow-400"
+														: "text-blue-600 dark:text-blue-400"
 												}
 											>
 												{detection().installed
 													? `Installed${detection().version ? ` (v${detection().version})` : ""}`
-													: "Not installed (will use npx)"}
+													: "Will download automatically"}
 											</span>
 										</div>
 
-										<Show when={detection().copilotBin}>
+										<Show when={!detection().installed}>
+											<div class="text-gray-500 dark:text-gray-400 pl-4">
+												copilot-api will be downloaded automatically on first
+												use via npx. This is a one-time process and requires
+												internet connection.
+											</div>
+										</Show>
+
+										<Show
+											when={detection().installed && detection().copilotBin}
+										>
 											<div class="text-gray-500 dark:text-gray-400 pl-4">
 												Path:{" "}
 												<code class="bg-gray-200 dark:bg-gray-700 px-1 rounded">
@@ -3065,7 +3076,7 @@ export function SettingsPage() {
 
 										<Show when={detection().npxBin}>
 											<div class="text-gray-500 dark:text-gray-400 pl-4">
-												npx:{" "}
+												npx available at{" "}
 												<code class="bg-gray-200 dark:bg-gray-700 px-1 rounded">
 													{detection().npxBin}
 												</code>

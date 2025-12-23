@@ -37,6 +37,7 @@ pub fn save_config(state: State<AppState>, config: AppConfig) -> Result<(), Stri
     Ok(())
 }
 
+#[allow(dead_code)]
 fn update_proxy_config_yaml(app_config: &AppConfig) -> Result<(), String> {
     let config_dir = dirs::config_dir()
         .unwrap_or_else(|| std::path::PathBuf::from("."))

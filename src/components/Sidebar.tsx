@@ -126,9 +126,16 @@ const navItems: NavItem[] = [
 ];
 
 export const Sidebar: Component = () => {
-	const { currentPage, setCurrentPage, proxyStatus } = appStore;
-	const [isExpanded, setIsExpanded] = createSignal(false);
+	const {
+		currentPage,
+		setCurrentPage,
+		proxyStatus,
+		sidebarExpanded,
+		setSidebarExpanded,
+	} = appStore;
 	const [isPinned, setIsPinned] = createSignal(false);
+
+	const isExpanded = () => isPinned() || sidebarExpanded();
 
 	const isActive = (id: PageId) => {
 		const page = currentPage();
@@ -137,20 +144,20 @@ export const Sidebar: Component = () => {
 
 	const handleMouseEnter = () => {
 		if (!isPinned()) {
-			setIsExpanded(true);
+			setSidebarExpanded(true);
 		}
 	};
 
 	const handleMouseLeave = () => {
 		if (!isPinned()) {
-			setIsExpanded(false);
+			setSidebarExpanded(false);
 		}
 	};
 
 	const togglePin = () => {
 		const newState = !isPinned();
 		setIsPinned(newState);
-		setIsExpanded(newState);
+		setSidebarExpanded(newState);
 	};
 
 	return (
