@@ -285,10 +285,7 @@ export interface AppConfig {
 	forceModelMappings: boolean; // Force model mappings to take precedence over local API keys
 	proxyApiKey?: string; // API key for client authentication
 	managementKey?: string; // Management API key for internal proxy calls
-	quotaViewMode?: string;
-	quotaSelectedAccounts?: string[];
-	quotaSelectedModels?: string[];
-	quotaFiltersExpanded?: boolean;
+	commercialMode?: boolean; // Disable request logging for lower memory usage
 }
 
 export async function getConfig(): Promise<AppConfig> {

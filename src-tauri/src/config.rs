@@ -70,14 +70,9 @@ pub struct AppConfig {
     pub proxy_api_key: String,
     #[serde(default = "default_management_key")]
     pub management_key: String,
-    #[serde(default = "default_quota_view_mode")]
-    pub quota_view_mode: String,
     #[serde(default)]
-    pub quota_selected_accounts: Vec<String>,
-    #[serde(default)]
-    pub quota_selected_models: Vec<String>,
-    #[serde(default = "default_quota_filters_expanded")]
-    pub quota_filters_expanded: bool,
+    pub commercial_mode: bool,
+
 }
 
 fn default_management_key() -> String {
@@ -108,13 +103,6 @@ fn default_routing_strategy() -> String {
     "round-robin".to_string()
 }
 
-fn default_quota_view_mode() -> String {
-    "chart".to_string()
-}
-
-fn default_quota_filters_expanded() -> bool {
-    false
-}
 
 impl Default for AppConfig {
     fn default() -> Self {
@@ -150,10 +138,8 @@ impl Default for AppConfig {
             max_retry_interval: 0,
             proxy_api_key: "proxypal-local".to_string(),
             management_key: "proxypal-mgmt-key".to_string(),
-            quota_view_mode: "chart".to_string(),
-            quota_selected_accounts: Vec::new(),
-            quota_selected_models: Vec::new(),
-            quota_filters_expanded: false,
+            commercial_mode: false,
+
         }
     }
 }

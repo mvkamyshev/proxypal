@@ -2791,6 +2791,17 @@ export function SettingsPage() {
 							<div class="border-t border-gray-200 dark:border-gray-700" />
 
 							<Switch
+								label="Commercial Mode"
+								description="Disable request logging middleware for lower memory usage (requires restart)"
+								checked={config().commercialMode ?? false}
+								onChange={(checked) =>
+									handleConfigChange("commercialMode", checked)
+								}
+							/>
+
+							<div class="border-t border-gray-200 dark:border-gray-700" />
+
+							<Switch
 								label="Log to File"
 								description="Write logs to rotating files instead of stdout"
 								checked={config().loggingToFile}

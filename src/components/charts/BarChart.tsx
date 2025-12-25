@@ -76,10 +76,16 @@ export function BarChart(props: BarChartProps) {
 				axisPointer: { type: "shadow" },
 				appendToBody: true,
 				confine: true,
-					formatter: (params: Array<{ name?: string; value?: number; dataIndex?: number }>) => {
-					const p = params[0];
+				formatter: (params: unknown) => {
+					const arr = params as Array<{
+						name?: string;
+						value?: number;
+						dataIndex?: number;
+					}>;
+					const p = arr[0];
 					if (!p) return "";
-					const val = typeof p.value === "number" ? p.value.toFixed(1) : p.value;
+					const val =
+						typeof p.value === "number" ? p.value.toFixed(1) : p.value;
 					const dataIndex = p.dataIndex ?? 0;
 					const item = chartData[dataIndex];
 					let result = `${p.name}: ${val}%`;
@@ -143,8 +149,9 @@ export function BarChart(props: BarChartProps) {
 					label: {
 						show: true,
 						position: "inside",
-						formatter: (params: { value?: number }) => {
-							const val = params.value ?? 0;
+						formatter: (params: unknown) => {
+							const p = params as { value?: number };
+							const val = p.value ?? 0;
 							return `${val.toFixed(1)}%`;
 						},
 						fontSize: 11,

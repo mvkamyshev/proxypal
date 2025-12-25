@@ -68,10 +68,6 @@ function createAppStore() {
 			rateLimit: undefined,
 			rateLimitWait: false,
 		},
-		quotaViewMode: "chart",
-		quotaSelectedAccounts: [],
-		quotaSelectedModels: [],
-		quotaFiltersExpanded: false,
 	});
 
 	// UI state
