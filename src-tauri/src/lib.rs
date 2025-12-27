@@ -4484,7 +4484,8 @@ export AMP_API_KEY="proxypal-local"
                         "name": "ProxyPal",
                         "options": {
                             "baseURL": endpoint_v1,
-                            "apiKey": "proxypal-local"
+                            "apiKey": "proxypal-local",
+                            "includeUsage": true
                         },
                         "models": models_obj
                     }
