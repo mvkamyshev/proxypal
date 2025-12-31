@@ -541,11 +541,28 @@ fn start_log_watcher(
                         agg.total_tokens_out += request_log.tokens_out.unwrap_or(0) as u64;
                         agg.total_tokens_cached += request_log.tokens_cached.unwrap_or(0) as u64;
                         
-                        // Update time-series (today's date)
-                        let today = chrono::Local::now().format("%Y-%m-%d").to_string();
+                        // Update time-series (today's date and current hour)
+                        let now = chrono::Local::now();
+                        let today = now.format("%Y-%m-%d").to_string();
+                        let hour_label = now.format("%Y-%m-%dT%H").to_string();
+                        
+                        // Update daily data
                         update_timeseries(&mut agg.requests_by_day, &today, 1);
                         let tokens = (request_log.tokens_in.unwrap_or(0) + request_log.tokens_out.unwrap_or(0)) as u64;
                         update_timeseries(&mut agg.tokens_by_day, &today, tokens);
+                        
+                        // Update hourly data (for Activity Patterns heatmap)
+                        update_timeseries(&mut agg.requests_by_hour, &hour_label, 1);
+                        update_timeseries(&mut agg.tokens_by_hour, &hour_label, tokens);
+                        
+                        // Trim hourly data to keep last 7 days worth (168 hours)
+                        const MAX_HOURLY_POINTS: usize = 168;
+                        if agg.requests_by_hour.len() > MAX_HOURLY_POINTS {
+                            agg.requests_by_hour = agg.requests_by_hour.split_off(agg.requests_by_hour.len() - MAX_HOURLY_POINTS);
+                        }
+                        if agg.tokens_by_hour.len() > MAX_HOURLY_POINTS {
+                            agg.tokens_by_hour = agg.tokens_by_hour.split_off(agg.tokens_by_hour.len() - MAX_HOURLY_POINTS);
+                        }
                         
                         // Update model/provider stats
                         update_model_stats(&mut agg, &request_log);
@@ -2342,43 +2359,54 @@ fn get_usage_stats(state: State<'_, AppState>) -> Result<UsageStats, String> {
         tokens_by_day = tokens_by_day.split_off(tokens_by_day.len() - 14);
     }
     
-    // Build hourly data from history (recent only)
-    let mut requests_by_hour_map: std::collections::HashMap<String, u64> = std::collections::HashMap::new();
-    let mut tokens_by_hour_map: std::collections::HashMap<String, u64> = std::collections::HashMap::new();
-    for req in &history.requests {
-        if let Some(dt) = chrono::DateTime::from_timestamp_millis(req.timestamp as i64) {
-            let hour_label = dt.format("%Y-%m-%dT%H").to_string();
-            *requests_by_hour_map.entry(hour_label.clone()).or_insert(0) += 1;
-            let tokens = (req.tokens_in.unwrap_or(0) + req.tokens_out.unwrap_or(0)) as u64;
-            *tokens_by_hour_map.entry(hour_label).or_insert(0) += tokens;
+    // Use aggregate hourly data (persisted across sessions), fall back to history if empty
+    let mut requests_by_hour: Vec<TimeSeriesPoint> = if !agg.requests_by_hour.is_empty() {
+        agg.requests_by_hour.clone()
+    } else {
+        // Build from history as fallback for existing data
+        let mut requests_by_hour_map: std::collections::HashMap<String, u64> = std::collections::HashMap::new();
+        for req in &history.requests {
+            if let Some(dt) = chrono::DateTime::from_timestamp_millis(req.timestamp as i64) {
+                let hour_label = dt.format("%Y-%m-%dT%H").to_string();
+                *requests_by_hour_map.entry(hour_label).or_insert(0) += 1;
+            }
         }
-    }
-    
-    let mut requests_by_hour: Vec<TimeSeriesPoint> = requests_by_hour_map.into_iter()
-        .map(|(label, value)| TimeSeriesPoint { label, value })
-        .collect();
+        requests_by_hour_map.into_iter()
+            .map(|(label, value)| TimeSeriesPoint { label, value })
+            .collect()
+    };
     requests_by_hour.sort_by(|a, b| a.label.cmp(&b.label));
-    if requests_by_hour.len() > 24 {
-        requests_by_hour = requests_by_hour.split_off(requests_by_hour.len() - 24);
+    // Keep last 168 hours (7 days) for Activity Patterns heatmap
+    if requests_by_hour.len() > 168 {
+        requests_by_hour = requests_by_hour.split_off(requests_by_hour.len() - 168);
     }
     
-    // Use live tokens_by_hour if available (more accurate), otherwise use computed from history
-    let mut tokens_by_hour: Vec<TimeSeriesPoint> = if let Some(ref live) = live_data {
+    // Use aggregate hourly tokens data, fall back to live data or history
+    let mut tokens_by_hour: Vec<TimeSeriesPoint> = if !agg.tokens_by_hour.is_empty() {
+        agg.tokens_by_hour.clone()
+    } else if let Some(ref live) = live_data {
         if !live.tokens_by_hour.is_empty() {
             live.tokens_by_hour.clone()
         } else {
+            // Build from history as fallback
+            let mut tokens_by_hour_map: std::collections::HashMap<String, u64> = std::collections::HashMap::new();
+            for req in &history.requests {
+                if let Some(dt) = chrono::DateTime::from_timestamp_millis(req.timestamp as i64) {
+                    let hour_label = dt.format("%Y-%m-%dT%H").to_string();
+                    let tokens = (req.tokens_in.unwrap_or(0) + req.tokens_out.unwrap_or(0)) as u64;
+                    *tokens_by_hour_map.entry(hour_label).or_insert(0) += tokens;
+                }
+            }
             tokens_by_hour_map.into_iter()
                 .map(|(label, value)| TimeSeriesPoint { label, value })
                 .collect()
         }
     } else {
-        tokens_by_hour_map.into_iter()
-            .map(|(label, value)| TimeSeriesPoint { label, value })
-            .collect()
+        vec![]
     };
     tokens_by_hour.sort_by(|a, b| a.label.cmp(&b.label));
-    if tokens_by_hour.len() > 24 {
-        tokens_by_hour = tokens_by_hour.split_off(tokens_by_hour.len() - 24);
+    if tokens_by_hour.len() > 168 {
+        tokens_by_hour = tokens_by_hour.split_off(tokens_by_hour.len() - 168);
     }
     
     Ok(UsageStats {
