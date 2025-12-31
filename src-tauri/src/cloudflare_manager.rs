@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tauri::{AppHandle, Emitter};
@@ -57,6 +58,9 @@ impl CloudflareManager {
         let handle = tauri::async_runtime::spawn(async move {
             emit_status_clone("connecting", Some("Starting tunnel...".into()), None);
             
+            let mut retry_count = 0;
+            const MAX_RETRIES: u32 = 3;
+            
             loop {
                 // For named tunnels with tokens from Cloudflare Dashboard:
                 // The ingress rules (including URL routing) are configured in the dashboard
@@ -99,87 +103,96 @@ impl CloudflareManager {
                         emit_status_clone("connecting", Some("Authenticating...".into()), None);
                         
                         let stderr = child.stderr.take();
-                        let stdout = child.stdout.take();
                         let emit_output = emit_status_clone.clone();
+                        let is_connected = Arc::new(AtomicBool::new(false));
+                        let is_connected_clone = is_connected.clone();
                         
-                        // Read both stdout and stderr for tunnel URL and status
-                        let output_reader = async move {
+                        // Spawn a task to read stderr and detect connection status
+                        let stderr_reader = tauri::async_runtime::spawn(async move {
                             use tokio::io::{AsyncBufReadExt, BufReader};
                             
                             let mut detected_url: Option<String> = None;
                             
-                            // Handle stderr (cloudflared logs to stderr)
                             if let Some(stderr) = stderr {
                                 let reader = BufReader::new(stderr);
                                 let mut lines = reader.lines();
+                                
                                 while let Ok(Some(line)) = lines.next_line().await {
                                     let line_lower = line.to_lowercase();
                                     
+                                    // Debug: log all lines for troubleshooting
+                                    #[cfg(debug_assertions)]
+                                    println!("[cloudflared] {}", line);
+                                    
                                     // Detect successful connection - cloudflared logs these on success:
-                                    // "INF Connection ... registered" or "INF Registered tunnel connection"
-                                    // "INF Starting tunnel tunnelID=..."
-                                    if (line_lower.contains("connection") && line_lower.contains("registered"))
-                                        || (line_lower.contains("registered") && line_lower.contains("tunnel"))
-                                        || (line_lower.contains("starting tunnel") && line_lower.contains("tunnelid"))
-                                    {
+                                    // "INF Connection ... registered connIndex=..."
+                                    // "INF Registered tunnel connection connIndex=..."
+                                    if line_lower.contains("registered") && 
+                                       (line_lower.contains("connection") || line_lower.contains("connindex")) {
+                                        is_connected_clone.store(true, Ordering::SeqCst);
                                         emit_output("connected", Some("Tunnel established".into()), detected_url.clone());
-                                    } else if line_lower.contains("tunnel url:") || line.contains(".trycloudflare.com") || line.contains(".cfargotunnel.com") {
-                                        // Extract URL from log (for quick tunnels)
+                                    } 
+                                    // Quick tunnel URL detection
+                                    else if line.contains(".trycloudflare.com") || line.contains(".cfargotunnel.com") {
                                         if let Some(url_start) = line.find("https://") {
                                             let url = line[url_start..].split_whitespace().next().unwrap_or("");
                                             detected_url = Some(url.to_string());
+                                            is_connected_clone.store(true, Ordering::SeqCst);
                                             emit_output("connected", Some("Tunnel ready".into()), detected_url.clone());
                                         }
-                                    } else if line_lower.contains("failed") || (line_lower.contains("error") && !line_lower.contains("loglevel")) {
-                                        // Ignore "loglevel" mentions which are just config info
+                                    }
+                                    // Detect errors (but ignore config info containing "error" word)
+                                    else if line_lower.contains("err ") || 
+                                            (line_lower.contains("failed") && !line_lower.contains("failed to parse")) ||
+                                            line_lower.contains("unable to") {
                                         emit_output("error", Some(line.clone()), None);
-                                    } else if line_lower.contains("ingress") && line_lower.contains("registered") {
-                                        emit_output("connected", Some("Tunnel active".into()), detected_url.clone());
-                                    } else if line_lower.contains("initial protocol") || line_lower.contains("connector id") {
-                                        // These indicate successful startup
+                                    }
+                                    // Connector established
+                                    else if line_lower.contains("initial protocol") || 
+                                            line_lower.contains("connection established") {
+                                        is_connected_clone.store(true, Ordering::SeqCst);
                                         emit_output("connected", Some("Tunnel connected".into()), detected_url.clone());
                                     }
                                 }
                             }
-                            
-                            // Also check stdout
-                            if let Some(stdout) = stdout {
-                                let reader = BufReader::new(stdout);
-                                let mut lines = reader.lines();
-                                while let Ok(Some(line)) = lines.next_line().await {
-                                    if line.contains("https://") && (line.contains(".trycloudflare.com") || line.contains(".cfargotunnel.com")) {
-                                        if let Some(url_start) = line.find("https://") {
-                                            let url = line[url_start..].split_whitespace().next().unwrap_or("");
-                                            emit_output("connected", Some("Tunnel ready".into()), Some(url.to_string()));
-                                        }
-                                    }
-                                }
-                            }
-                            
-                            None::<String>
-                        };
+                        });
 
+                        // Wait for either: process exit, stop signal
                         tokio::select! {
                             exit_status = child.wait() => {
+                                stderr_reader.abort();
                                 match exit_status {
                                     Ok(status) => {
                                         if status.success() {
-                                            emit_status_clone("disconnected", Some("Closed normally".into()), None);
+                                            emit_status_clone("disconnected", Some("Tunnel closed".into()), None);
                                         } else {
-                                            emit_status_clone("error", Some(format!("Exited code: {:?}", status.code())), None);
+                                            let code = status.code().unwrap_or(-1);
+                                            emit_status_clone("error", Some(format!("Exit code: {}", code)), None);
                                         }
                                     }
                                     Err(e) => {
-                                        emit_status_clone("error", Some(format!("Wait error: {}", e)), None);
+                                        emit_status_clone("error", Some(format!("Process error: {}", e)), None);
                                     }
                                 }
-                            }
-                            _ = output_reader => {
-                                let _ = child.wait().await;
+                                
+                                // Only retry if we were connected (unexpected disconnect)
+                                // or if we haven't exceeded retry count
+                                if is_connected.load(Ordering::SeqCst) {
+                                    // Was connected, retry to reconnect
+                                    retry_count = 0;
+                                    emit_status_clone("reconnecting", Some("Connection lost, reconnecting...".into()), None);
+                                } else if retry_count < MAX_RETRIES {
+                                    retry_count += 1;
+                                    emit_status_clone("reconnecting", Some(format!("Retrying ({}/{})...", retry_count, MAX_RETRIES)), None);
+                                } else {
+                                    emit_status_clone("error", Some("Failed to connect after multiple attempts".into()), None);
+                                    break;
+                                }
                             }
                             _ = notify_clone.notified() => {
                                 let _ = child.kill().await;
-                                emit_status_clone("disconnected", Some("User disconnected".into()), None);
+                                stderr_reader.abort();
+                                emit_status_clone("disconnected", Some("Tunnel stopped".into()), None);
                                 break;
                             }
                         }
@@ -191,16 +204,25 @@ impl CloudflareManager {
                             format!("Failed to start: {}", e)
                         };
                         emit_status_clone("error", Some(error_msg), None);
+                        
+                        // Don't retry if cloudflared is not found
+                        if e.kind() == std::io::ErrorKind::NotFound {
+                            break;
+                        }
+                        
+                        retry_count += 1;
+                        if retry_count >= MAX_RETRIES {
+                            emit_status_clone("error", Some("Failed to start after multiple attempts".into()), None);
+                            break;
+                        }
                     }
                 }
                 
-                // Retry logic
-                emit_status_clone("reconnecting", Some("Retrying in 5s...".into()), None);
-                
+                // Wait before retry
                 tokio::select! {
                     _ = tokio::time::sleep(Duration::from_secs(5)) => {}
                     _ = notify_clone.notified() => {
-                        emit_status_clone("disconnected", Some("User disconnected".into()), None);
+                        emit_status_clone("disconnected", Some("Tunnel stopped".into()), None);
                         break;
                     }
                 }

@@ -72,6 +72,8 @@ import {
 	setSshConnection,
 	setThinkingBudgetSettings,
 	setWebsocketAuth,
+	startProxy,
+	stopProxy,
 	type ThinkingBudgetSettings,
 	testOpenAIProvider,
 	type UpdateInfo,
@@ -1087,7 +1089,16 @@ export function SettingsPage() {
 		setSaving(true);
 		try {
 			await saveConfig(newConfig);
-			toastStore.success("Settings saved");
+
+			// If management key changed and proxy is running, restart proxy to apply new key
+			if (key === "managementKey" && appStore.proxyStatus().running) {
+				toastStore.info("Restarting proxy to apply new management key...");
+				await stopProxy();
+				await startProxy();
+				toastStore.success("Proxy restarted with new management key");
+			} else {
+				toastStore.success("Settings saved");
+			}
 		} catch (error) {
 			console.error("Failed to save config:", error);
 			toastStore.error("Failed to save settings", String(error));
@@ -1486,6 +1497,9 @@ export function SettingsPage() {
 								<p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
 									Secret key for internal management API. Change this if
 									exposing proxy publicly.
+								</p>
+								<p class="mt-1 text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded">
+									⚠️ Changing this key requires a proxy restart to take effect.
 								</p>
 							</label>
 
