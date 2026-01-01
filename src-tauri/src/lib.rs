@@ -4035,8 +4035,13 @@ fn setup_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 
     let menu = Menu::with_items(app, &[&toggle_item, &dashboard_item, &quit_item])?;
 
+    // Use dedicated tray icon (22x22 @1x, 44x44 @2x for retina)
+    let tray_icon = tauri::image::Image::from_bytes(include_bytes!("../icons/tray-icon@2x.png"))
+        .expect("Failed to load tray icon");
+    
     let _tray = TrayIconBuilder::new()
-        .icon(app.default_window_icon().unwrap().clone())
+        .icon(tray_icon)
+        .icon_as_template(true)
         .menu(&menu)
         .show_menu_on_left_click(false)
         .tooltip("ProxyPal - Proxy stopped")
