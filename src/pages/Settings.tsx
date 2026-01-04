@@ -101,6 +101,27 @@ export function SettingsPage() {
 	const [appVersion, setAppVersion] = createSignal("0.0.0");
 	const [models, setModels] = createSignal<AvailableModel[]>([]);
 	const [agents, setAgents] = createSignal<AgentStatus[]>([]);
+
+	// OAuth models grouped by source provider
+	const oauthModelsBySource = createMemo(() => {
+		const oauthSources = ["oauth", "copilot", "claude-oauth", "gemini-oauth"];
+		const oauthModels = models().filter((m) =>
+			oauthSources.some((src) =>
+				m.source?.toLowerCase().includes(src.toLowerCase()),
+			),
+		);
+
+		// Group by source
+		const grouped: Record<string, string[]> = {};
+		for (const model of oauthModels) {
+			const source = model.source || "unknown";
+			if (!grouped[source]) {
+				grouped[source] = [];
+			}
+			grouped[source].push(model.id);
+		}
+		return grouped;
+	});
 	const [configuringAgent, setConfiguringAgent] = createSignal<string | null>(
 		null,
 	);
@@ -3688,6 +3709,66 @@ export function SettingsPage() {
 									Manage
 								</Button>
 							</div>
+						</div>
+					</div>
+
+					{/* OAuth Model Mappings */}
+					<div
+						class="space-y-4"
+						classList={{ hidden: activeTab() !== "providers" }}
+					>
+						<h2 class="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
+							OAuth Model Mappings
+						</h2>
+
+						<div class="p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
+							<Show
+								when={Object.keys(oauthModelsBySource()).length > 0}
+								fallback={
+									<p class="text-sm text-gray-500 dark:text-gray-400">
+										No OAuth-sourced models available. Connect an OAuth provider
+										to see models here.
+									</p>
+								}
+							>
+								<div class="space-y-4">
+									<For each={Object.entries(oauthModelsBySource())}>
+										{([source, modelIds]) => (
+											<div>
+												<p class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2 flex items-center gap-2">
+													<span
+														class={`w-2 h-2 rounded-full ${
+															source.includes("copilot")
+																? "bg-purple-500"
+																: source.includes("claude")
+																	? "bg-orange-500"
+																	: source.includes("gemini")
+																		? "bg-blue-500"
+																		: "bg-green-500"
+														}`}
+													/>
+													{source
+														.replace(/-/g, " ")
+														.replace(/\b\w/g, (c) => c.toUpperCase())}
+												</p>
+												<div class="flex flex-wrap gap-1.5">
+													<For each={modelIds}>
+														{(modelId) => (
+															<span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+																{modelId}
+															</span>
+														)}
+													</For>
+												</div>
+											</div>
+										)}
+									</For>
+								</div>
+							</Show>
+							<p class="text-xs text-gray-400 dark:text-gray-500 mt-3">
+								These models are available through OAuth-authenticated accounts
+								and are automatically routed by ProxyPal.
+							</p>
 						</div>
 					</div>
 
