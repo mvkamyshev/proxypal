@@ -1177,6 +1177,81 @@ export function SettingsPage() {
 			}
 		}
 
+		// Static fallback models for when no OAuth accounts are configured
+		// These should match the actual models available from each provider
+		const fallbackModels = {
+			anthropic: [
+				// Claude 4.5 models (use aliases for simplicity)
+				{ value: "claude-opus-4-5", label: "claude-opus-4-5" },
+				{ value: "claude-sonnet-4-5", label: "claude-sonnet-4-5" },
+				{ value: "claude-haiku-4-5", label: "claude-haiku-4-5" },
+			],
+			google: [
+				// Gemini native models
+				{ value: "gemini-2.5-pro", label: "gemini-2.5-pro" },
+				{ value: "gemini-2.5-flash", label: "gemini-2.5-flash" },
+				{ value: "gemini-2.5-flash-lite", label: "gemini-2.5-flash-lite" },
+				{ value: "gemini-3-pro-preview", label: "gemini-3-pro-preview" },
+				{ value: "gemini-3-flash-preview", label: "gemini-3-flash-preview" },
+				{
+					value: "gemini-3-pro-image-preview",
+					label: "gemini-3-pro-image-preview",
+				},
+				{
+					value: "gemini-2.5-computer-use-preview-10-2025",
+					label: "gemini-2.5-computer-use-preview",
+				},
+				// Gemini-Claude (Antigravity) models
+				{ value: "gemini-claude-opus-4-5", label: "gemini-claude-opus-4-5" },
+				{
+					value: "gemini-claude-opus-4-5-thinking",
+					label: "gemini-claude-opus-4-5-thinking",
+				},
+				{
+					value: "gemini-claude-sonnet-4-5",
+					label: "gemini-claude-sonnet-4-5",
+				},
+				{
+					value: "gemini-claude-sonnet-4-5-thinking",
+					label: "gemini-claude-sonnet-4-5-thinking",
+				},
+				// GPT-OSS model
+				{ value: "gpt-oss-120b-medium", label: "gpt-oss-120b-medium" },
+			],
+			openai: [
+				// GPT-5 series
+				{ value: "gpt-5", label: "gpt-5" },
+				{ value: "gpt-5.1", label: "gpt-5.1" },
+				{ value: "gpt-5.2", label: "gpt-5.2" },
+				// GPT-5 Codex models
+				{ value: "gpt-5-codex", label: "gpt-5-codex" },
+				{ value: "gpt-5-codex-mini", label: "gpt-5-codex-mini" },
+				{ value: "gpt-5.1-codex", label: "gpt-5.1-codex" },
+				{ value: "gpt-5.1-codex-max", label: "gpt-5.1-codex-max" },
+				{ value: "gpt-5.1-codex-mini", label: "gpt-5.1-codex-mini" },
+				{ value: "gpt-5.2-codex", label: "gpt-5.2-codex" },
+				// o-series reasoning models
+				{ value: "o3", label: "o3" },
+				{ value: "o3-mini", label: "o3-mini" },
+				{ value: "o4-mini", label: "o4-mini" },
+				// GPT-4 series (legacy)
+				{ value: "gpt-4.1", label: "gpt-4.1" },
+				{ value: "gpt-4.1-mini", label: "gpt-4.1-mini" },
+				{ value: "gpt-4o", label: "gpt-4o" },
+				{ value: "gpt-4o-mini", label: "gpt-4o-mini" },
+			],
+			qwen: [
+				{ value: "qwen3-235b-a22b", label: "qwen3-235b-a22b" },
+				{ value: "qwq-32b", label: "qwq-32b" },
+			],
+			iflow: [] as { value: string; label: string }[],
+			copilot: [
+				{ value: "copilot-gpt-4o", label: "copilot-gpt-4o" },
+				{ value: "copilot-claude-sonnet-4", label: "copilot-claude-sonnet-4" },
+				{ value: "copilot-gemini-2.5-pro", label: "copilot-gemini-2.5-pro" },
+			],
+		};
+
 		// Group real available models by provider
 		const models = availableModels();
 		const groupedModels = {
@@ -1205,7 +1280,35 @@ export function SettingsPage() {
 				.map((m) => ({ value: m.id, label: m.id })),
 		};
 
-		return { customModels, builtInModels: groupedModels };
+		// Use real models if available, otherwise fallback to static list
+		const builtInModels = {
+			anthropic:
+				groupedModels.anthropic.length > 0
+					? groupedModels.anthropic
+					: fallbackModels.anthropic,
+			google:
+				groupedModels.google.length > 0
+					? groupedModels.google
+					: fallbackModels.google,
+			openai:
+				groupedModels.openai.length > 0
+					? groupedModels.openai
+					: fallbackModels.openai,
+			qwen:
+				groupedModels.qwen.length > 0
+					? groupedModels.qwen
+					: fallbackModels.qwen,
+			iflow:
+				groupedModels.iflow.length > 0
+					? groupedModels.iflow
+					: fallbackModels.iflow,
+			copilot:
+				groupedModels.copilot.length > 0
+					? groupedModels.copilot
+					: fallbackModels.copilot,
+		};
+
+		return { customModels, builtInModels };
 	};
 
 	const handleConfigChange = async (
