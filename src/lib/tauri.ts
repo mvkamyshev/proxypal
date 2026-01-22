@@ -20,6 +20,11 @@ export async function getProxyStatus(): Promise<ProxyStatus> {
 	return invoke("get_proxy_status");
 }
 
+// GPT Reasoning Models (single source of truth from backend)
+export async function getGptReasoningModels(): Promise<string[]> {
+	return invoke("get_gpt_reasoning_models");
+}
+
 // OAuth management
 export type Provider =
 	| "claude"
@@ -115,42 +120,48 @@ export const AMP_MODEL_SLOTS: AmpModelSlot[] = [
 	{
 		id: "opus-4-5",
 		name: "Smart",
-		fromModel: "claude-opus-4-5-20251101", // Opus 4.5 (200K context)
-		fromLabel: "Claude Opus 4.5 (200K)",
+		fromModel: "claude-opus-4-5-20251101",
+		fromLabel: "Claude Opus 4.5",
 	},
-	// Claude Sonnet 4.5 - used by Librarian subagent
-	{
-		id: "sonnet-4-5",
-		name: "Librarian",
-		fromModel: "claude-sonnet-4-5-20250929", // Sonnet 4.5 (1M context)
-		fromLabel: "Claude Sonnet 4.5 (1M)",
-	},
-	// Claude Haiku 4.5 - used by Rush agent and Search subagent
+	// Claude Haiku 4.5 - used by Librarian, Rush, and Titling subagents
 	{
 		id: "haiku-4-5",
-		name: "Rush / Search",
-		fromModel: "claude-haiku-4-5-20251001", // Haiku 4.5
+		name: "Librarian/Rush/Titling",
+		fromModel: "claude-haiku-4-5-20251001",
 		fromLabel: "Claude Haiku 4.5",
 	},
-	// GPT-5.1 - used by Oracle agent
+	// Gemini 3 Flash - used by Search subagent
+	{
+		id: "search",
+		name: "Search",
+		fromModel: "gemini-3-flash-preview",
+		fromLabel: "Gemini 3 Flash",
+	},
+	// GPT-5.2 - used by Oracle agent
 	{
 		id: "oracle",
 		name: "Oracle",
-		fromModel: "gpt-5.1",
-		fromLabel: "GPT-5.1",
+		fromModel: "gpt-5.2",
+		fromLabel: "GPT-5.2",
 	},
-	// Gemini models for Review and Handoff
+	// Gemini models for Review, Handoff, and Topics
 	{
 		id: "review",
 		name: "Review",
-		fromModel: "gemini-2.5-flash-lite",
-		fromLabel: "Gemini 2.5 Flash-Lite",
+		fromModel: "gemini-3-pro-preview",
+		fromLabel: "Gemini 3 Pro",
 	},
 	{
 		id: "handoff",
 		name: "Handoff",
 		fromModel: "gemini-2.5-flash",
 		fromLabel: "Gemini 2.5 Flash",
+	},
+	{
+		id: "topics",
+		name: "Topics",
+		fromModel: "gemini-2.5-flash-lite-preview-09-2025",
+		fromLabel: "Gemini 2.5 Flash-Lite Preview",
 	},
 ];
 
@@ -161,8 +172,8 @@ export const AMP_MODEL_ALIASES: Record<string, string> = {
 	"claude-opus-4-5": "claude-opus-4-5-20251101",
 	"claude-haiku-4.5": "claude-haiku-4-5-20251001",
 	"claude-haiku-4-5": "claude-haiku-4-5-20251001",
-	"claude-sonnet-4.5": "claude-sonnet-4-5-20250929",
-	"claude-sonnet-4-5": "claude-sonnet-4-5-20250929",
+	"claude-sonnet-4.5": "claude-sonnet-4-5-20241022",
+	"claude-sonnet-4-5": "claude-sonnet-4-5-20241022",
 };
 
 // Complete list of GitHub Copilot models available via copilot-api

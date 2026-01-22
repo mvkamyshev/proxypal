@@ -49,6 +49,24 @@ use std::os::windows::process::CommandExt;
 #[cfg(target_os = "windows")]
 const CREATE_NO_WINDOW: u32 = 0x08000000;
 
+// GPT-5 base models that support reasoning level suffixes (single source of truth)
+// Used by both backend (proxy config generation) and frontend (Settings UI)
+const GPT5_BASE_MODELS: &[&str] = &[
+    "gpt-5",
+    "gpt-5-mini",
+    "gpt-5-codex",
+    "gpt-5-codex-mini",
+    "gpt-5.1",
+    "gpt-5.1-codex",
+    "gpt-5.1-codex-mini",
+    "gpt-5.1-codex-max",
+    "gpt-5.2",
+    "gpt-5.2-codex",
+];
+
+// GPT-5 reasoning level suffixes
+const GPT5_REASONING_SUFFIXES: &[&str] = &["minimal", "low", "medium", "high", "xhigh"];
+
 // Load request history from file
 fn load_request_history() -> RequestHistory {
     let path = get_history_path();
@@ -600,6 +618,11 @@ fn get_proxy_status(state: State<AppState>) -> ProxyStatus {
 }
 
 #[tauri::command]
+fn get_gpt_reasoning_models() -> Vec<String> {
+    GPT5_BASE_MODELS.iter().map(|s| s.to_string()).collect()
+}
+
+#[tauri::command]
 async fn start_proxy(
     app: tauri::AppHandle,
     state: State<'_, AppState>,
@@ -738,22 +761,16 @@ async fn start_proxy(
         // OpenAI GPT models - use direct names (no prefix) for CLIProxyAPI compatibility
         entry.push_str("      - alias: \"gpt-4.1\"\n");
         entry.push_str("        name: \"gpt-4.1\"\n");
-        entry.push_str("      - alias: \"gpt-5\"\n");
-        entry.push_str("        name: \"gpt-5\"\n");
-        entry.push_str("      - alias: \"gpt-5-mini\"\n");
-        entry.push_str("        name: \"gpt-5-mini\"\n");
-        entry.push_str("      - alias: \"gpt-5-codex\"\n");
-        entry.push_str("        name: \"gpt-5-codex\"\n");
-        entry.push_str("      - alias: \"gpt-5.1\"\n");
-        entry.push_str("        name: \"gpt-5.1\"\n");
-        entry.push_str("      - alias: \"gpt-5.1-codex\"\n");
-        entry.push_str("        name: \"gpt-5.1-codex\"\n");
-        entry.push_str("      - alias: \"gpt-5.1-codex-mini\"\n");
-        entry.push_str("        name: \"gpt-5.1-codex-mini\"\n");
-        entry.push_str("      - alias: \"gpt-5.1-codex-max\"\n");
-        entry.push_str("        name: \"gpt-5.1-codex-max\"\n");
-        entry.push_str("      - alias: \"gpt-5.2\"\n");
-        entry.push_str("        name: \"gpt-5.2\"\n");
+        // Use shared constants for GPT-5 models and reasoning suffixes
+        for model in GPT5_BASE_MODELS {
+            entry.push_str(&format!("      - alias: \"{}\"\n", model));
+            entry.push_str(&format!("        name: \"{}\"\n", model));
+            for suffix in GPT5_REASONING_SUFFIXES {
+                let suffixed = format!("{}({})", model, suffix);
+                entry.push_str(&format!("      - alias: \"{}\"\n", suffixed));
+                entry.push_str(&format!("        name: \"{}\"\n", suffixed));
+            }
+        }
         // Legacy OpenAI models (may still work)
         entry.push_str("      - alias: \"gpt-4o\"\n");
         entry.push_str("        name: \"gpt-4o\"\n");
@@ -7024,6 +7041,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             get_proxy_status,
+            get_gpt_reasoning_models,
             start_proxy,
             stop_proxy,
             // Copilot Management

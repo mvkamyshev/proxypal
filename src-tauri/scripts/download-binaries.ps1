@@ -51,11 +51,19 @@ try {
 
     Expand-Archive -Path $ZipPath -DestinationPath $TempDir -Force
 
-    $SourceExe = Join-Path $TempDir "CLIProxyAPI.exe"
     $DestPath = Join-Path $BinariesDir $BinaryName
+    $CandidateExes = Get-ChildItem -Path $TempDir -Recurse -Filter *.exe | Where-Object {
+        $_.Name -match "CLIProxyAPI|cliproxyapi|cli-proxy-api"
+    }
 
-    if (Test-Path $SourceExe) {
-        Copy-Item -Path $SourceExe -Destination $DestPath -Force
+    if (-not $CandidateExes -or $CandidateExes.Count -eq 0) {
+        $CandidateExes = Get-ChildItem -Path $TempDir -Recurse -Filter *.exe
+    }
+
+    $SourceExe = $CandidateExes | Sort-Object FullName | Select-Object -First 1
+
+    if ($SourceExe) {
+        Copy-Item -Path $SourceExe.FullName -Destination $DestPath -Force
         Write-Host "Downloaded to $DestPath"
     } else {
         Write-Error "Binary not found in archive."
