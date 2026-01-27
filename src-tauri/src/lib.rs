@@ -4377,6 +4377,74 @@ async fn get_available_models(state: State<'_, AppState>) -> Result<Vec<Availabl
 }
 
 #[tauri::command]
+async fn test_provider_connection(
+    model_id: String,
+    state: State<'_, AppState>,
+) -> Result<ProviderTestResult, String> {
+    let config = state.config.lock().unwrap();
+    let port = config.port;
+    let api_key = config.proxy_api_key.clone();
+    drop(config);
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(30))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let endpoint = format!("http://localhost:{}/v1/chat/completions", port);
+    
+    let payload = serde_json::json!({
+        "model": model_id,
+        "messages": [
+            {
+                "role": "user",
+                "content": "Say 'OK'"
+            }
+        ],
+        "max_tokens": 5
+    });
+
+    let start = std::time::Instant::now();
+    let response = client.post(&endpoint)
+        .header("Authorization", format!("Bearer {}", api_key))
+        .json(&payload)
+        .send()
+        .await;
+    
+    let latency = start.elapsed().as_millis() as u64;
+
+    match response {
+        Ok(resp) => {
+            let status = resp.status();
+            if status.is_success() {
+                Ok(ProviderTestResult {
+                    success: true,
+                    message: "Connection successful!".to_string(),
+                    latency_ms: Some(latency),
+                    models_found: None,
+                })
+            } else {
+                let error_text = resp.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+                Ok(ProviderTestResult {
+                    success: false,
+                    message: format!("Error {}: {}", status, error_text),
+                    latency_ms: Some(latency),
+                    models_found: None,
+                })
+            }
+        }
+        Err(e) => {
+            Ok(ProviderTestResult {
+                success: false,
+                message: format!("Connection failed: {}", e),
+                latency_ms: Some(latency),
+                models_found: None,
+            })
+        }
+    }
+}
+
+#[tauri::command]
 async fn test_openai_provider(base_url: String, api_key: String) -> Result<ProviderTestResult, String> {
     if base_url.is_empty() || api_key.is_empty() {
         return Ok(ProviderTestResult {
