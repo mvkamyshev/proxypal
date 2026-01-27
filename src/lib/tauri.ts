@@ -295,6 +295,9 @@ export interface AppConfig {
 	launchAtLogin: boolean;
 	debug: boolean;
 	proxyUrl: string;
+	proxyUsername?: string;
+	proxyPassword?: string;
+	useSystemProxy?: boolean;
 	requestRetry: number;
 	quotaSwitchProject: boolean;
 	quotaSwitchPreviewModel: boolean;

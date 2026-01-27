@@ -39,4 +39,6 @@ regex = "1"
 lazy_static = "1"
 uuid = { version = "1", features = ["v4"] }
 tauri-plugin-fs = "2.4.4"
+sysproxy = "0.3.0"
+env_proxy = "0.4.1"
 

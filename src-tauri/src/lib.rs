@@ -691,11 +691,26 @@ async fn start_proxy(
     let proxy_config_path = config_dir.join("proxy-config.yaml");
     
     // Build proxy-url line if configured
-    let proxy_url_line = if config.proxy_url.is_empty() {
-        String::new()
+    let mut proxy_url_line = String::new();
+    
+    // If system proxy is enabled, try to detect it
+    let mut effective_proxy_url = if config.use_system_proxy {
+        crate::commands::proxy::get_system_proxy().ok().flatten().unwrap_or_default()
     } else {
-        format!("proxy-url: \"{}\"\n", config.proxy_url)
+        config.proxy_url.clone()
     };
+
+    if !effective_proxy_url.is_empty() {
+        // Handle proxy authentication if provided
+        if !config.proxy_username.is_empty() && !config.proxy_password.is_empty() {
+            if let Ok(mut url) = url::Url::parse(&effective_proxy_url) {
+                let _ = url.set_username(&config.proxy_username);
+                let _ = url.set_password(Some(&config.proxy_password));
+                effective_proxy_url = url.to_string();
+            }
+        }
+        proxy_url_line = format!("proxy-url: \"{}\"\n", effective_proxy_url);
+    }
     
     // Build amp api key line if configured
     let amp_api_key_line = if config.amp_api_key.is_empty() {
@@ -7572,6 +7587,7 @@ pub fn run() {
             commands::config::get_config_yaml,
             commands::config::save_config_yaml,
             commands::config::reload_config,
+            commands::proxy::get_system_proxy,
             detect_ai_tools,
             configure_continue,
             get_tool_setup_info,
