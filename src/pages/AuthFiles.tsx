@@ -45,6 +45,9 @@ export function AuthFilesPage() {
 	const [filter, setFilter] = createSignal<string>("all");
 	const [showDeleteAllConfirm, setShowDeleteAllConfirm] = createSignal(false);
 	const [fileToDelete, setFileToDelete] = createSignal<AuthFile | null>(null);
+	const [testingProvider, setTestingProvider] = createSignal<string | null>(
+		null,
+	);
 
 	// Load auth files on mount and when proxy status changes
 	createEffect(() => {
@@ -92,6 +95,45 @@ export function AuthFilesPage() {
 			}
 		} catch (err) {
 			toastStore.error(`Failed to upload file: ${err}`);
+		}
+	};
+
+	const handleTestConnection = async (file: AuthFile) => {
+		// Determine a model to test with based on provider
+		// Using ProxyPal's model IDs that map to each provider's auth
+		let modelId: string | null = null;
+		const p = file.provider.toLowerCase();
+		if (p.includes("claude")) modelId = "gemini-claude-sonnet-4-5";
+		else if (p.includes("gemini") || p.includes("vertex"))
+			modelId = "gemini-2.5-flash";
+		else if (p.includes("codex")) modelId = "gpt-5.1-codex-mini";
+		else if (p.includes("qwen")) modelId = "glm-4.5";
+		else if (p.includes("deepseek")) modelId = "deepseek-chat";
+		else if (p.includes("iflow")) modelId = "gemini-claude-sonnet-4-5";
+		else if (p.includes("antigravity")) modelId = "gemini-2.5-flash";
+
+		if (!modelId) {
+			toastStore.error(
+				`Unknown provider: ${file.provider}. Cannot determine test model.`,
+			);
+			return;
+		}
+
+		setTestingProvider(file.name);
+		try {
+			const { testProviderConnection } = await import("../lib/tauri");
+			const result = await testProviderConnection(modelId);
+			if (result.success) {
+				toastStore.success(
+					`Connection to ${file.provider} successful! (${result.latencyMs}ms)`,
+				);
+			} else {
+				toastStore.error(`Connection failed: ${result.message}`);
+			}
+		} catch (err: any) {
+			toastStore.error(`Test failed: ${err}`);
+		} finally {
+			setTestingProvider(null);
 		}
 	};
 
@@ -463,6 +505,65 @@ export function AuthFilesPage() {
 																{file.statusMessage}
 															</div>
 														</Show>
+
+														<div class="flex items-center gap-2 mt-4">
+															<button
+																type="button"
+																onClick={() => handleTestConnection(file)}
+																disabled={
+																	testingProvider() === file.name ||
+																	file.disabled
+																}
+																class={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-smooth ${
+																	testingProvider() === file.name
+																		? "bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-not-allowed"
+																		: "bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400 hover:bg-brand-100 dark:hover:bg-brand-900/30 border border-brand-200/50 dark:border-brand-800/50"
+																}`}
+															>
+																<Show
+																	when={testingProvider() === file.name}
+																	fallback={
+																		<svg
+																			class="w-3.5 h-3.5"
+																			fill="none"
+																			viewBox="0 0 24 24"
+																			stroke="currentColor"
+																		>
+																			<path
+																				stroke-linecap="round"
+																				stroke-linejoin="round"
+																				stroke-width="2"
+																				d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+																			/>
+																		</svg>
+																	}
+																>
+																	<svg
+																		class="w-3.5 h-3.5 animate-spin"
+																		fill="none"
+																		viewBox="0 0 24 24"
+																		stroke="currentColor"
+																	>
+																		<circle
+																			class="opacity-25"
+																			cx="12"
+																			cy="12"
+																			r="10"
+																			stroke="currentColor"
+																			stroke-width="4"
+																		/>
+																		<path
+																			class="opacity-75"
+																			fill="currentColor"
+																			d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+																		/>
+																	</svg>
+																</Show>
+																{testingProvider() === file.name
+																	? "Testing..."
+																	: "Test Connection"}
+															</button>
+														</div>
 
 														{/* Stats */}
 														<Show

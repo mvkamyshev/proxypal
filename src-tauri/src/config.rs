@@ -17,6 +17,12 @@ pub struct AppConfig {
     #[serde(default)]
     pub proxy_url: String,
     #[serde(default)]
+    pub proxy_username: String,
+    #[serde(default)]
+    pub proxy_password: String,
+    #[serde(default)]
+    pub use_system_proxy: bool,
+    #[serde(default)]
     pub request_retry: u16,
     #[serde(default)]
     pub quota_switch_project: bool,
@@ -130,6 +136,9 @@ impl Default for AppConfig {
             launch_at_login: false,
             debug: false,
             proxy_url: String::new(),
+            proxy_username: String::new(),
+            proxy_password: String::new(),
+            use_system_proxy: false,
             request_retry: 0,
             quota_switch_project: false,
             quota_switch_preview_model: false,

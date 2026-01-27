@@ -691,11 +691,26 @@ async fn start_proxy(
     let proxy_config_path = config_dir.join("proxy-config.yaml");
     
     // Build proxy-url line if configured
-    let proxy_url_line = if config.proxy_url.is_empty() {
-        String::new()
+    let mut proxy_url_line = String::new();
+    
+    // If system proxy is enabled, try to detect it
+    let mut effective_proxy_url = if config.use_system_proxy {
+        crate::commands::proxy::get_system_proxy().ok().flatten().unwrap_or_default()
     } else {
-        format!("proxy-url: \"{}\"\n", config.proxy_url)
+        config.proxy_url.clone()
     };
+
+    if !effective_proxy_url.is_empty() {
+        // Handle proxy authentication if provided
+        if !config.proxy_username.is_empty() && !config.proxy_password.is_empty() {
+            if let Ok(mut url) = url::Url::parse(&effective_proxy_url) {
+                let _ = url.set_username(&config.proxy_username);
+                let _ = url.set_password(Some(&config.proxy_password));
+                effective_proxy_url = url.to_string();
+            }
+        }
+        proxy_url_line = format!("proxy-url: \"{}\"\n", effective_proxy_url);
+    }
     
     // Build amp api key line if configured
     let amp_api_key_line = if config.amp_api_key.is_empty() {
@@ -4362,6 +4377,74 @@ async fn get_available_models(state: State<'_, AppState>) -> Result<Vec<Availabl
 }
 
 #[tauri::command]
+async fn test_provider_connection(
+    model_id: String,
+    state: State<'_, AppState>,
+) -> Result<ProviderTestResult, String> {
+    let (port, api_key) = {
+        let config = state.config.lock().unwrap();
+        (config.port, config.proxy_api_key.clone())
+    };
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(30))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let endpoint = format!("http://localhost:{}/v1/chat/completions", port);
+    
+    let payload = serde_json::json!({
+        "model": model_id,
+        "messages": [
+            {
+                "role": "user",
+                "content": "Say 'OK'"
+            }
+        ],
+        "max_tokens": 5
+    });
+
+    let start = std::time::Instant::now();
+    let response = client.post(&endpoint)
+        .header("Authorization", format!("Bearer {}", api_key))
+        .json(&payload)
+        .send()
+        .await;
+    
+    let latency = start.elapsed().as_millis() as u64;
+
+    match response {
+        Ok(resp) => {
+            let status = resp.status();
+            if status.is_success() {
+                Ok(ProviderTestResult {
+                    success: true,
+                    message: "Connection successful!".to_string(),
+                    latency_ms: Some(latency),
+                    models_found: None,
+                })
+            } else {
+                let error_text = resp.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+                Ok(ProviderTestResult {
+                    success: false,
+                    message: format!("Error {}: {}", status, error_text),
+                    latency_ms: Some(latency),
+                    models_found: None,
+                })
+            }
+        }
+        Err(e) => {
+            Ok(ProviderTestResult {
+                success: false,
+                message: format!("Connection failed: {}", e),
+                latency_ms: Some(latency),
+                models_found: None,
+            })
+        }
+    }
+}
+
+#[tauri::command]
 async fn test_openai_provider(base_url: String, api_key: String) -> Result<ProviderTestResult, String> {
     if base_url.is_empty() || api_key.is_empty() {
         return Ok(ProviderTestResult {
@@ -7572,6 +7655,7 @@ pub fn run() {
             commands::config::get_config_yaml,
             commands::config::save_config_yaml,
             commands::config::reload_config,
+            commands::proxy::get_system_proxy,
             detect_ai_tools,
             configure_continue,
             get_tool_setup_info,
@@ -7590,7 +7674,7 @@ pub fn run() {
             import_usage_stats,
             get_available_models,
             test_openai_provider,
-            fetch_openai_compatible_models,
+            test_provider_connection,
             fetch_openai_compatible_models,
             // API Keys Management
             get_gemini_api_keys,

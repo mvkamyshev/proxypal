@@ -295,6 +295,9 @@ export interface AppConfig {
 	launchAtLogin: boolean;
 	debug: boolean;
 	proxyUrl: string;
+	proxyUsername?: string;
+	proxyPassword?: string;
+	useSystemProxy?: boolean;
 	requestRetry: number;
 	quotaSwitchProject: boolean;
 	quotaSwitchPreviewModel: boolean;
@@ -677,6 +680,12 @@ export async function testOpenAIProvider(
 	apiKey: string,
 ): Promise<ProviderTestResult> {
 	return invoke("test_openai_provider", { baseUrl, apiKey });
+}
+
+export async function testProviderConnection(
+	modelId: string,
+): Promise<ProviderTestResult> {
+	return invoke("test_provider_connection", { modelId });
 }
 
 // ============================================
