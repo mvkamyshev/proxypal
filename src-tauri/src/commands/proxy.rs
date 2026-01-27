@@ -14,10 +14,7 @@ pub fn get_system_proxy() -> Result<Option<String>, String> {
     }
 
     // 2. Check OS-level system proxy settings
-    #[cfg(target_os = "macos")]
     let sys_proxy = Sysproxy::get_system_proxy();
-    #[cfg(not(target_os = "macos"))]
-    let sys_proxy = Sysproxy::get();
 
     match sys_proxy {
         Ok(proxy) if proxy.enable => {
