@@ -1084,7 +1084,7 @@ ws-auth: {}
     // This prevents CLIProxyAPI from writing logs to src-tauri/logs/ which triggers hot reload
     let sidecar = app
         .shell()
-        .sidecar("cliproxyapi")
+        .sidecar("cli-proxy-api")
         .map_err(|e| format!("Failed to create sidecar command: {}", e))?
         .env("WRITABLE_PATH", config_dir.to_str().unwrap())
         .args(["--config", proxy_config_path.to_str().unwrap()]);
