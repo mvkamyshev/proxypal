@@ -108,8 +108,32 @@ jobs:
             tar -xzf "$ARCHIVE"
           fi
 
-          # CLIProxyAPIPlus binary detection (prioritize Plus naming, fallback to original)
-          if [ -f "cli-proxy-api-plus" ]; then
+          # List extracted contents for debugging
+          ls -la
+
+          # CLIProxyAPIPlus uses platform-suffixed names like cli-proxy-api-x86_64-pc-windows-msvc.exe
+          # Detect the correct binary based on platform
+          case "${{ matrix.target }}" in
+            aarch64-apple-darwin)
+              SRC_BINARY="cli-proxy-api-aarch64-apple-darwin"
+              ;;
+            x86_64-apple-darwin)
+              SRC_BINARY="cli-proxy-api-x86_64-apple-darwin"
+              ;;
+            x86_64-unknown-linux-gnu)
+              SRC_BINARY="cli-proxy-api-x86_64-unknown-linux-gnu"
+              ;;
+            x86_64-pc-windows-msvc)
+              SRC_BINARY="cli-proxy-api-x86_64-pc-windows-msvc.exe"
+              ;;
+          esac
+
+          if [ -f "$SRC_BINARY" ]; then
+            echo "Found platform-specific binary: $SRC_BINARY"
+            cp "$SRC_BINARY" "$GITHUB_WORKSPACE/src-tauri/binaries/$BINARY"
+            chmod +x "$GITHUB_WORKSPACE/src-tauri/binaries/$BINARY" 2>/dev/null || true
+          # Fallback to generic naming (older releases)
+          elif [ -f "cli-proxy-api-plus" ]; then
             cp cli-proxy-api-plus "$GITHUB_WORKSPACE/src-tauri/binaries/$BINARY"
             chmod +x "$GITHUB_WORKSPACE/src-tauri/binaries/$BINARY"
           elif [ -f "cli-proxy-api-plus.exe" ]; then
@@ -130,7 +154,8 @@ jobs:
             cp cli-proxy-api "$GITHUB_WORKSPACE/src-tauri/binaries/$BINARY"
             chmod +x "$GITHUB_WORKSPACE/src-tauri/binaries/$BINARY"
           else
-            echo "Binary not found!"
+            echo "ERROR: Binary not found!"
+            echo "Looking for: $SRC_BINARY"
             ls -la
             exit 1
           fi
