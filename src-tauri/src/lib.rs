@@ -3691,18 +3691,31 @@ async fn fetch_antigravity_quota() -> Result<Vec<types::AntigravityQuotaResult>,
                                              .map(|r| r * 100.0)
                                              .unwrap_or(0.0);
 
-                                         // Map model names to display names
-                                         let display_name = match model_name.as_str() {
-                                             "gemini-2.5-pro" => "Gemini 2.5 Pro",
-                                             "gemini-2.5-flash" => "Gemini 2.5 Flash",
-                                             "gemini-2.0-flash" => "Gemini 2.0 Flash",
-                                             "gemini-2.0-flash-lite" => "Gemini 2.0 Flash Lite",
-                                             "gemini-exp-1206" => "Gemini Exp",
-                                             "claude-sonnet-4-5" | "claude-sonnet-4-5-thinking" => "Claude Sonnet 4.5",
-                                             "claude-opus-4-5" | "claude-opus-4-5-thinking" => "Claude Opus 4.5",
-                                             "imagen-3.0-generate-002" => "Imagen 3",
-                                             _ => &model_name,
-                                         }.to_string();
+                                          // Map model names to display names
+                                          let display_name = match model_name.as_str() {
+                                              "gemini-2.5-pro" => "Gemini 2.5 Pro",
+                                              "gemini-2.5-flash" => "Gemini 2.5 Flash",
+                                              "gemini-2.0-flash" => "Gemini 2.0 Flash",
+                                              "gemini-2.0-flash-lite" => "Gemini 2.0 Flash Lite",
+                                              "gemini-exp-1206" => "Gemini Exp",
+                                              // Gemini 3.x models (from Antigravity API)
+                                              "gemini-3-pro-high" | "3-pro-high" => "Gemini 3 Pro High",
+                                              "gemini-3-pro-low" | "3-pro-low" => "Gemini 3 Pro Low",
+                                              "gemini-3-flash" | "3-flash" => "Gemini 3 Flash",
+                                              "gemini-3-pro-image" => "Gemini 3 Pro Image",
+                                              // Claude models via Antigravity
+                                              "claude-sonnet-4-5" | "claude-sonnet-4-5-thinking" => "Claude Sonnet 4.5",
+                                              "claude-opus-4-5" | "claude-opus-4-5-thinking" => "Claude Opus 4.5",
+                                              "claude-haiku-4-5" => "Claude Haiku 4.5",
+                                              "claude-4-6-sonnet" | "claude-sonnet-4-6" => "Claude Sonnet 4.6",
+                                              "claude-4-6-opus" | "claude-opus-4-6" => "Claude Opus 4.6",
+                                              // Imagen
+                                              "imagen-3.0-generate-002" | "imagen-3" => "Imagen 3",
+                                              // Chat models
+                                              "chat_20706" => "Chat 20706",
+                                              "chat_23310" => "Chat 23310",
+                                              _ => &model_name,
+                                          }.to_string();
 
                                          quotas.push(ModelQuota {
                                              model: model_name,
