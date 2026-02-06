@@ -12,6 +12,7 @@ import {
 	getAuthStatus,
 	getConfig,
 	getProxyStatus,
+	migrateAmpModelMappings,
 	onAuthStatusChanged,
 	onCloudflareStatusChanged,
 	onOAuthCallback,
@@ -19,6 +20,7 @@ import {
 	onSshStatusChanged,
 	onTrayToggleProxy,
 	refreshAuthStatus,
+	saveConfig,
 	showSystemNotification,
 	startProxy,
 	stopProxy,
@@ -132,6 +134,22 @@ function createAppStore() {
 
 			updateProxyStatus(proxyState);
 			setConfig(configState);
+
+			// Auto-migrate amp model mappings when slot models change across versions
+			if (configState.ampModelMappings?.length) {
+				const result = migrateAmpModelMappings(configState.ampModelMappings);
+				if (result.migrated) {
+					const updatedConfig = {
+						...configState,
+						ampModelMappings: result.mappings,
+					};
+					setConfig(updatedConfig);
+					await saveConfig(updatedConfig);
+					console.log(
+						"[ProxyPal] Auto-migrated amp model mappings to new slot models",
+					);
+				}
+			}
 
 			// Refresh auth status from CLIProxyAPI's auth directory
 			try {

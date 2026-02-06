@@ -113,6 +113,37 @@ export interface AmpModelSlot {
 	fromLabel: string; // Friendly label for the source model
 }
 
+// Migration map for slot model changes across versions
+// When Ampcode updates a slot's model, add old → new here so user configs auto-migrate
+// Format: { oldFromModel: newFromModel }
+const SLOT_MODEL_MIGRATIONS: Record<string, string> = {
+	"claude-opus-4-5-20251101": "claude-opus-4-6", // Smart: Opus 4.5 → 4.6
+	"claude-opus-4-6-20260205": "claude-opus-4-6", // Fix: Ampcode sends without date suffix
+};
+
+// Auto-migrate amp model mappings when slot models change
+// Returns true if any mappings were migrated (caller should save config)
+export function migrateAmpModelMappings(mappings: AmpModelMapping[]): {
+	migrated: boolean;
+	mappings: AmpModelMapping[];
+} {
+	let migrated = false;
+	const currentSlotModels = new Set(AMP_MODEL_SLOTS.map((s) => s.fromModel));
+	const updated = mappings.map((m) => {
+		const newName = SLOT_MODEL_MIGRATIONS[m.name];
+		if (newName && currentSlotModels.has(newName)) {
+			// Only migrate if no mapping for the new model already exists
+			const alreadyHasNew = mappings.some((other) => other.name === newName);
+			if (!alreadyHasNew) {
+				migrated = true;
+				return { ...m, name: newName };
+			}
+		}
+		return m;
+	});
+	return { migrated, mappings: updated };
+}
+
 // Default Amp model slots (these are the models Amp CLI uses)
 // Based on actual Amp CLI logs (~/.cache/amp/logs/cli.log) and ampcode.com/models
 // IMPORTANT: Model names must match EXACTLY what Amp sends in requests
@@ -122,7 +153,7 @@ export const AMP_MODEL_SLOTS: AmpModelSlot[] = [
 	{
 		id: "opus-4-6",
 		name: "Smart",
-		fromModel: "claude-opus-4-6-20260205",
+		fromModel: "claude-opus-4-6",
 		fromLabel: "Claude Opus 4.6",
 	},
 	// Claude Sonnet 4.5 - used by Librarian subagent
@@ -177,8 +208,8 @@ export const AMP_MODEL_SLOTS: AmpModelSlot[] = [
 // Common model aliases that Amp might use (without date suffix)
 // These map to the full model identifiers
 export const AMP_MODEL_ALIASES: Record<string, string> = {
-	"claude-opus-4.6": "claude-opus-4-6-20260205",
-	"claude-opus-4-6": "claude-opus-4-6-20260205",
+	"claude-opus-4.6": "claude-opus-4-6",
+	"claude-opus-4-6-20260205": "claude-opus-4-6", // Ampcode sends without date suffix
 	"claude-opus-4.5": "claude-opus-4-5-20251101",
 	"claude-opus-4-5": "claude-opus-4-5-20251101",
 	"claude-sonnet-4.5": "claude-sonnet-4-5-20241022",
