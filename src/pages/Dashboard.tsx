@@ -2582,7 +2582,7 @@ function CodexQuotaWidget(props: { authStatus: { openai: number } }) {
 function KiroQuotaWidget() {
 	const [quotaData, setQuotaData] = createSignal<KiroQuotaResult[]>([]);
 	const [loading, setLoading] = createSignal(false);
-	const [expanded, setExpanded] = createSignal(true);
+	const [expanded, setExpanded] = createSignal(false);
 
 	const loadQuota = async () => {
 		setLoading(true);
@@ -2688,8 +2688,9 @@ function KiroQuotaWidget() {
 
 					<For each={quotaData()}>
 						{(quota) => (
-							<div class="p-4 rounded-xl bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700/50">
-								<div class="flex items-center justify-between mb-2">
+							<div class="p-4 rounded-xl bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700/50 space-y-3">
+								{/* Account Header */}
+								<div class="flex items-center justify-between">
 									<div class="flex items-center gap-2">
 										<span class="text-xs font-medium text-gray-900 dark:text-gray-100">
 											{quota.accountEmail}
@@ -2698,15 +2699,66 @@ function KiroQuotaWidget() {
 											{quota.plan}
 										</span>
 									</div>
-									<Show when={quota.totalCredits > 0}>
-										<span class="text-xs font-bold text-gray-900 dark:text-gray-100">
-											{quota.usedCredits} / {quota.totalCredits} credits
-										</span>
-									</Show>
 								</div>
 
+								{/* Plan Credits */}
+								<Show when={quota.totalCredits > 0}>
+									<div class="space-y-1">
+										<div class="flex items-center justify-between">
+											<span class="text-xs text-gray-500 dark:text-gray-400">Plan Credits</span>
+											<div class="flex items-center gap-2">
+												<Show when={quota.resetsOn}>
+													<span class="text-[10px] text-brand-600 dark:text-brand-400">
+														Resets {quota.resetsOn}
+													</span>
+												</Show>
+												<span class="text-xs font-medium text-gray-900 dark:text-gray-100">
+														{quota.usedCredits.toFixed(2)} / {quota.totalCredits} used
+												</span>
+											</div>
+										</div>
+										<div class="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+											<div
+												class="h-full bg-brand-500 transition-all duration-300"
+												style={{ width: `${quota.usedPercent}%` }}
+											/>
+										</div>
+									</div>
+								</Show>
+
+								{/* Bonus Credits */}
+								<Show when={quota.bonusCreditsTotal > 0}>
+									<div class="space-y-1">
+										<div class="flex items-center justify-between">
+											<div class="flex items-center gap-1.5">
+												<svg class="w-3.5 h-3.5 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
+													<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
+												</svg>
+												<span class="text-xs text-gray-500 dark:text-gray-400">Bonus Credits</span>
+											</div>
+											<div class="flex items-center gap-2">
+												<Show when={quota.bonusCreditsExpiresDays}>
+													<span class="text-[10px] text-amber-600 dark:text-amber-400">
+														Expires in {quota.bonusCreditsExpiresDays} days
+													</span>
+												</Show>
+												<span class="text-xs font-medium text-gray-900 dark:text-gray-100">
+													{quota.bonusCreditsUsed.toFixed(2)} / {quota.bonusCreditsTotal} used
+												</span>
+											</div>
+										</div>
+										<div class="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+											<div
+												class="h-full bg-amber-500 transition-all duration-300"
+												style={{ width: `${(quota.bonusCreditsUsed / quota.bonusCreditsTotal) * 100}%` }}
+											/>
+										</div>
+									</div>
+								</Show>
+
+								{/* No Data / Error State */}
 								<Show
-									when={quota.totalCredits > 0}
+									when={quota.totalCredits > 0 || quota.bonusCreditsTotal > 0}
 									fallback={
 										<div class="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400">
 											<svg
@@ -2728,12 +2780,7 @@ function KiroQuotaWidget() {
 										</div>
 									}
 								>
-									<div class="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-										<div
-											class="h-full bg-brand-500 transition-all duration-300"
-											style={{ width: `${quota.usedPercent}%` }}
-										/>
-									</div>
+									{null}
 								</Show>
 							</div>
 						)}

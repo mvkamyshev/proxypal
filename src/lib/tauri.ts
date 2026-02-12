@@ -1407,6 +1407,10 @@ export interface KiroQuotaResult {
 	totalCredits: number;
 	usedCredits: number;
 	usedPercent: number;
+	bonusCreditsUsed: number;
+	bonusCreditsTotal: number;
+	bonusCreditsExpiresDays?: number;
+	resetsOn?: string;
 	fetchedAt: string;
 	error?: string;
 }

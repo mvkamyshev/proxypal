@@ -4172,6 +4172,10 @@ async fn fetch_kiro_quota() -> Result<Vec<types::quota::KiroQuotaResult>, String
                 total_credits: 0.0,
                 used_credits: 0.0,
                 used_percent: 0.0,
+                bonus_credits_used: 0.0,
+                bonus_credits_total: 0.0,
+                bonus_credits_expires_days: None,
+                resets_on: None,
                 fetched_at: chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
                 error: Some("kiro-cli not found. Install it to enable quota tracking.".to_string()),
             }]);
@@ -4197,6 +4201,10 @@ async fn fetch_kiro_quota() -> Result<Vec<types::quota::KiroQuotaResult>, String
                 total_credits: 0.0,
                 used_credits: 0.0,
                 used_percent: 0.0,
+                bonus_credits_used: 0.0,
+                bonus_credits_total: 0.0,
+                bonus_credits_expires_days: None,
+                resets_on: None,
                 fetched_at: chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
                 error: None,
             };
@@ -4219,21 +4227,23 @@ async fn fetch_kiro_quota() -> Result<Vec<types::quota::KiroQuotaResult>, String
                 }
             }
 
-            // Fallback for bonus credits if needed
+            // Parse bonus credits
             let re_bonus = Regex::new(r"Bonus credits:\s*(\d+\.?\d*)/(\d+)").unwrap();
             if let Some(cap) = re_bonus.captures(&clean_text) {
-                 let bonus_used: f64 = cap[1].parse().unwrap_or(0.0);
-                 let bonus_total: f64 = cap[2].parse().unwrap_or(0.0);
-                 // If we have bonus credits, we can add them or show them. 
-                 // For now let's just stick to the main plan pool for simplicity, 
-                 // but we'll include them in the used/total if the main ones weren't found.
-                 if result.total_credits == 0.0 {
-                     result.used_credits = bonus_used;
-                     result.total_credits = bonus_total;
-                     if bonus_total > 0.0 {
-                         result.used_percent = (bonus_used / bonus_total) * 100.0;
-                     }
-                 }
+                result.bonus_credits_used = cap[1].parse().unwrap_or(0.0);
+                result.bonus_credits_total = cap[2].parse().unwrap_or(0.0);
+            }
+
+            // Parse bonus credits expiration: "expires in 22 days"
+            let re_bonus_expires = Regex::new(r"expires in (\d+) days").unwrap();
+            if let Some(cap) = re_bonus_expires.captures(&clean_text) {
+                result.bonus_credits_expires_days = cap[1].parse().ok();
+            }
+
+            // Parse reset date: "resets on 03/01"
+            let re_resets_on = Regex::new(r"resets on (\d{2}/\d{2})").unwrap();
+            if let Some(cap) = re_resets_on.captures(&clean_text) {
+                result.resets_on = Some(cap[1].to_string());
             }
 
             Ok(vec![result])
@@ -4246,6 +4256,10 @@ async fn fetch_kiro_quota() -> Result<Vec<types::quota::KiroQuotaResult>, String
                 total_credits: 0.0,
                 used_credits: 0.0,
                 used_percent: 0.0,
+                bonus_credits_used: 0.0,
+                bonus_credits_total: 0.0,
+                bonus_credits_expires_days: None,
+                resets_on: None,
                 fetched_at: chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
                 error: Some(format!("kiro-cli failed: {}", stderr)),
             }])
@@ -4258,6 +4272,10 @@ async fn fetch_kiro_quota() -> Result<Vec<types::quota::KiroQuotaResult>, String
                 total_credits: 0.0,
                 used_credits: 0.0,
                 used_percent: 0.0,
+                bonus_credits_used: 0.0,
+                bonus_credits_total: 0.0,
+                bonus_credits_expires_days: None,
+                resets_on: None,
                 fetched_at: chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
                 error: Some(format!("Failed to run kiro-cli: {}", e)),
             }])

@@ -110,6 +110,14 @@ pub struct KiroQuotaResult {
     pub used_credits: f64,
     /// Percent of credits used
     pub used_percent: f64,
+    /// Bonus credits used (gift/ promotional credits)
+    pub bonus_credits_used: f64,
+    /// Bonus credits total available
+    pub bonus_credits_total: f64,
+    /// Bonus credits expiration in days (if available)
+    pub bonus_credits_expires_days: Option<i32>,
+    /// Plan credits reset date (MM/DD format from "resets on MM/DD")
+    pub resets_on: Option<String>,
     pub fetched_at: String,
     pub error: Option<String>,
 }
