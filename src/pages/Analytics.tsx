@@ -17,6 +17,7 @@ import {
 	HeatmapChart,
 	type HeatmapData,
 } from "../components/charts";
+import { useI18n } from "../i18n";
 import {
 	exportUsageStats,
 	getUsageStats,
@@ -62,21 +63,27 @@ function formatLabel(label: string, range: TimeRange): string {
 	// Format: "2025-12-02" -> "Dec 2"
 	try {
 		const date = new Date(label);
-		return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+		return date.toLocaleDateString(undefined, {
+			month: "short",
+			day: "numeric",
+		});
 	} catch {
 		return label;
 	}
 }
 
-function formatTimeAgo(timestamp: number): string {
+function formatTimeAgo(
+	timestamp: number,
+	t: (key: string, params?: Record<string, string | number>) => string,
+): string {
 	const seconds = Math.floor((Date.now() - timestamp) / 1000);
-	if (seconds < 60) return "just now";
+	if (seconds < 60) return t("analytics.time.justNow");
 	const minutes = Math.floor(seconds / 60);
-	if (minutes < 60) return `${minutes}m ago`;
+	if (minutes < 60) return t("analytics.time.minutesAgo", { count: minutes });
 	const hours = Math.floor(minutes / 60);
-	if (hours < 24) return `${hours}h ago`;
+	if (hours < 24) return t("analytics.time.hoursAgo", { count: hours });
 	const days = Math.floor(hours / 24);
-	return `${days}d ago`;
+	return t("analytics.time.daysAgo", { count: days });
 }
 
 // Simple mini bar chart for model breakdown
@@ -315,6 +322,7 @@ function StatCard(props: {
 }
 
 export function Analytics() {
+	const { t } = useI18n();
 	const [stats, setStats] = createSignal<UsageStats | null>(null);
 	const [loading, setLoading] = createSignal(true);
 	const [timeRange, setTimeRange] = createSignal<TimeRange>("day");
@@ -510,11 +518,11 @@ export function Analytics() {
 	};
 
 	const presets: { label: string; value: DatePreset }[] = [
-		{ label: "24H", value: "24h" },
-		{ label: "7D", value: "7d" },
-		{ label: "14D", value: "14d" },
-		{ label: "30D", value: "30d" },
-		{ label: "All", value: "all" },
+		{ label: t("analytics.presets.24h"), value: "24h" },
+		{ label: t("analytics.presets.7d"), value: "7d" },
+		{ label: t("analytics.presets.14d"), value: "14d" },
+		{ label: t("analytics.presets.30d"), value: "30d" },
+		{ label: t("analytics.presets.all"), value: "all" },
 	];
 
 	// Privacy blur class
@@ -590,7 +598,7 @@ export function Analytics() {
 	};
 
 	const formatCost = (cost: number) => {
-		if (cost < 0.01) return "<$0.01";
+		if (cost < 0.01) return t("analytics.lessThanCent");
 		if (cost < 1) return `$${cost.toFixed(2)}`;
 		return `$${cost.toFixed(2)}`;
 	};
@@ -602,10 +610,10 @@ export function Analytics() {
 				<div class="flex items-center justify-between flex-wrap gap-3">
 					<div>
 						<h1 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
-							Analytics
+							{t("analytics.title")}
 						</h1>
 						<p class="text-sm text-gray-500 dark:text-gray-400">
-							Track usage & insights
+							{t("analytics.subtitle")}
 						</p>
 					</div>
 
@@ -630,7 +638,7 @@ export function Analytics() {
 
 						{/* Last Updated */}
 						<span class="text-xs text-gray-400 dark:text-gray-500 hidden sm:inline">
-							Updated {formatTimeAgo(lastUpdated())}
+							{t("analytics.updated")} {formatTimeAgo(lastUpdated(), t)}
 						</span>
 
 						{/* Privacy Toggle */}
@@ -642,7 +650,9 @@ export function Analytics() {
 									: "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
 							}`}
 							title={
-								privacyMode() ? "Show sensitive data" : "Hide sensitive data"
+								privacyMode()
+									? t("analytics.showSensitiveData")
+									: t("analytics.hideSensitiveData")
 							}
 						>
 							<svg
@@ -691,7 +701,7 @@ export function Analytics() {
 									d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
 								/>
 							</svg>
-							<span class="hidden sm:inline">Refresh</span>
+							<span class="hidden sm:inline">{t("analytics.refresh")}</span>
 						</button>
 
 						{/* Export Button */}
@@ -699,7 +709,7 @@ export function Analytics() {
 							onClick={handleExport}
 							disabled={exporting() || !stats() || stats()!.totalRequests === 0}
 							class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
-							title="Export usage statistics"
+							title={t("analytics.exportUsageStatistics")}
 						>
 							<svg
 								class={`w-4 h-4 ${exporting() ? "animate-pulse" : ""}`}
@@ -714,7 +724,7 @@ export function Analytics() {
 									d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
 								/>
 							</svg>
-							<span class="hidden sm:inline">Export</span>
+							<span class="hidden sm:inline">{t("analytics.export")}</span>
 						</button>
 
 						{/* Import Button */}
@@ -722,7 +732,7 @@ export function Analytics() {
 							onClick={handleImport}
 							disabled={importing()}
 							class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
-							title="Import usage statistics"
+							title={t("analytics.importUsageStatistics")}
 						>
 							<svg
 								class={`w-4 h-4 ${importing() ? "animate-pulse" : ""}`}
@@ -737,7 +747,7 @@ export function Analytics() {
 									d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
 								/>
 							</svg>
-							<span class="hidden sm:inline">Import</span>
+							<span class="hidden sm:inline">{t("analytics.import")}</span>
 						</button>
 					</div>
 				</div>
@@ -759,30 +769,32 @@ export function Analytics() {
 							/>
 						</svg>
 						<h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-							No Usage Data Yet
+							{t("analytics.noUsageDataYet")}
 						</h3>
 						<p class="text-gray-500 dark:text-gray-400 mb-6">
-							Analytics will appear after you make requests through the proxy
+							{t("analytics.noUsageDescription")}
 						</p>
 
 						{/* Troubleshooting tips */}
 						<div class="max-w-md mx-auto text-left bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
 							<p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-								Not seeing data? Check that:
+								{t("analytics.troubleshooting.title")}
 							</p>
 							<ul class="text-sm text-gray-600 dark:text-gray-400 space-y-2">
 								<li class="flex items-start gap-2">
 									<span class="text-green-500 mt-0.5">✓</span>
-									<span>Proxy is running (check Dashboard status)</span>
-								</li>
-								<li class="flex items-start gap-2">
-									<span class="text-green-500 mt-0.5">✓</span>
-									<span>At least one provider is connected</span>
+									<span>{t("analytics.troubleshooting.proxyRunning")}</span>
 								</li>
 								<li class="flex items-start gap-2">
 									<span class="text-green-500 mt-0.5">✓</span>
 									<span>
-										Your AI tool is configured to use{" "}
+										{t("analytics.troubleshooting.providerConnected")}
+									</span>
+								</li>
+								<li class="flex items-start gap-2">
+									<span class="text-green-500 mt-0.5">✓</span>
+									<span>
+										{t("analytics.troubleshooting.toolConfigured")}{" "}
 										<code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-xs">
 											http://localhost:8317/v1
 										</code>
@@ -790,9 +802,7 @@ export function Analytics() {
 								</li>
 								<li class="flex items-start gap-2">
 									<span class="text-green-500 mt-0.5">✓</span>
-									<span>
-										You've made at least one request from your AI tool
-									</span>
+									<span>{t("analytics.troubleshooting.madeRequest")}</span>
 								</li>
 							</ul>
 						</div>
@@ -816,24 +826,30 @@ export function Analytics() {
 					{/* Overview cards - 3 essential metrics */}
 					<div class="grid grid-cols-3 gap-3 sm:gap-4">
 						<StatCard
-							title="Total Requests"
+							title={t("dashboard.kpi.totalRequests")}
 							value={formatNumber(stats()!.totalRequests)}
-							subtitle={`${formatNumber(stats()!.requestsToday)} today`}
+							subtitle={t("dashboard.kpi.requestsToday", {
+								count: formatNumber(stats()!.requestsToday),
+							})}
 							icon="bolt"
 							colorClass="bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800/50 text-blue-700 dark:text-blue-300"
 						/>
 						<StatCard
-							title="Success Rate"
+							title={t("dashboard.kpi.successRate")}
 							value={`${Math.min(100, successRate())}%`}
-							subtitle={`${formatNumber(stats()!.failureCount)} failed`}
+							subtitle={t("dashboard.kpi.failedCount", {
+								count: formatNumber(stats()!.failureCount),
+							})}
 							icon="check"
 							colorClass="bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800/50 text-blue-700 dark:text-blue-300"
 						/>
 						<div class={blurClass()}>
 							<StatCard
-								title="Est. Cost"
+								title={t("dashboard.kpi.estimatedCost")}
 								value={formatCost(estimatedCost())}
-								subtitle={`${formatTokens(stats()!.totalTokens)} tokens`}
+								subtitle={t("dashboard.kpi.tokensCount", {
+									count: formatTokens(stats()!.totalTokens),
+								})}
 								icon="bolt"
 								colorClass="bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800/50 text-blue-700 dark:text-blue-300"
 							/>
@@ -858,7 +874,9 @@ export function Analytics() {
 									/>
 								</svg>
 								<h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-									{datePreset() === "24h" ? "Last 24 Hours" : "Request Trends"}
+									{datePreset() === "24h"
+										? t("analytics.last24Hours")
+										: t("analytics.requestTrends")}
 								</h2>
 							</div>
 
@@ -868,7 +886,7 @@ export function Analytics() {
 									<LineChart
 										getLabels={() => requestsChartData().labels}
 										getData={() => requestsChartData().data}
-										label="Requests"
+										label={t("analytics.requests")}
 										color="rgb(59, 130, 246)"
 										fillColor="rgba(59, 130, 246, 0.1)"
 									/>
@@ -893,14 +911,14 @@ export function Analytics() {
 											/>
 										</svg>
 										<h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-											Token Usage
+											{t("analytics.tokenUsage")}
 										</h2>
 									</div>
 									<div class="h-48 sm:h-64">
 										<LineChart
 											getLabels={() => tokensChartData().labels}
 											getData={() => tokensChartData().data}
-											label="Tokens"
+											label={t("analytics.tokens")}
 											color="rgb(59, 130, 246)"
 											fillColor="rgba(59, 130, 246, 0.1)"
 										/>
@@ -927,10 +945,10 @@ export function Analytics() {
 								/>
 							</svg>
 							<p class="text-gray-500 dark:text-gray-400">
-								No trend data available yet
+								{t("analytics.noTrendData")}
 							</p>
 							<p class="text-sm text-gray-400 dark:text-gray-500 mt-1">
-								Charts will appear as you use the proxy
+								{t("analytics.chartsWillAppear")}
 							</p>
 						</div>
 					</Show>
@@ -966,22 +984,28 @@ export function Analytics() {
 									/>
 								</svg>
 								<h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-									Model Usage
+									{t("analytics.modelUsage")}
 								</h2>
 							</div>
 							<div class="overflow-x-auto">
 								<table class="w-full">
 									<thead>
 										<tr class="text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-											<th class="pb-3">Model</th>
-											<th class="pb-3 text-right">Requests</th>
-											<th class="pb-3 text-right">Tokens</th>
-											<th class="pb-3 text-right hidden md:table-cell">In</th>
-											<th class="pb-3 text-right hidden md:table-cell">Out</th>
-											<th class="pb-3 text-right hidden lg:table-cell">
-												Cache
+											<th class="pb-3">{t("analytics.model")}</th>
+											<th class="pb-3 text-right">{t("analytics.requests")}</th>
+											<th class="pb-3 text-right">{t("analytics.tokens")}</th>
+											<th class="pb-3 text-right hidden md:table-cell">
+												{t("analytics.in")}
 											</th>
-											<th class="pb-3 w-32 hidden sm:table-cell">Usage</th>
+											<th class="pb-3 text-right hidden md:table-cell">
+												{t("analytics.out")}
+											</th>
+											<th class="pb-3 text-right hidden lg:table-cell">
+												{t("analytics.cache")}
+											</th>
+											<th class="pb-3 w-32 hidden sm:table-cell">
+												{t("analytics.usage")}
+											</th>
 										</tr>
 									</thead>
 									<tbody class="divide-y divide-gray-100 dark:divide-gray-700">
@@ -1038,13 +1062,13 @@ export function Analytics() {
 								}
 							>
 								<p class="text-xs text-gray-400 dark:text-gray-500 mt-3 text-center">
-									Showing top 10 of{" "}
+									{t("analytics.showingTop10Of")}{" "}
 									{
 										stats()!.models.filter(
 											(m) => m.model !== "unknown" && m.model !== "",
 										).length
 									}{" "}
-									models
+									{t("analytics.models")}
 								</p>
 							</Show>
 						</div>
@@ -1078,11 +1102,11 @@ export function Analytics() {
 											/>
 										</svg>
 										<h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-											Model Breakdown
+											{t("analytics.modelBreakdown")}
 										</h2>
 									</div>
 									<div class="h-64 flex items-center justify-center text-gray-400 dark:text-gray-500">
-										No model data available
+										{t("analytics.noModelData")}
 									</div>
 								</div>
 							}
@@ -1109,14 +1133,14 @@ export function Analytics() {
 										/>
 									</svg>
 									<h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-										Model Breakdown
+										{t("analytics.modelBreakdown")}
 									</h2>
 								</div>
 								<div class="h-64">
 									<DonutChart
 										data={providerDonutData()}
 										centerText={formatNumber(stats()!.totalRequests)}
-										centerSubtext="requests"
+										centerSubtext={t("analytics.requests")}
 									/>
 								</div>
 							</div>
@@ -1140,7 +1164,7 @@ export function Analytics() {
 										/>
 									</svg>
 									<h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-										Success Rate
+										{t("dashboard.kpi.successRate")}
 									</h2>
 								</div>
 								<div class="h-64">
@@ -1168,10 +1192,10 @@ export function Analytics() {
 									/>
 								</svg>
 								<h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-									Activity Patterns
+									{t("analytics.activityPatterns")}
 								</h2>
 								<span class="text-xs text-gray-500 dark:text-gray-400 ml-auto">
-									Hour × Day of Week
+									{t("analytics.hourByDayOfWeek")}
 								</span>
 							</div>
 							<div class="h-48">

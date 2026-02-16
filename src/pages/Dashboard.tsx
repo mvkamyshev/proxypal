@@ -17,6 +17,7 @@ import { OAuthModal } from "../components/OAuthModal";
 import { OpenCodeKitBanner } from "../components/OpenCodeKitBanner";
 import { StatusIndicator } from "../components/StatusIndicator";
 import { Button } from "../components/ui";
+import { useI18n } from "../i18n";
 import {
 	type AgentConfigResult,
 	type AntigravityQuotaResult,
@@ -160,6 +161,7 @@ function KpiTile(props: {
 }
 
 export function DashboardPage() {
+	const { t } = useI18n();
 	const {
 		proxyStatus,
 		setProxyStatus,
@@ -287,15 +289,21 @@ export function DashboardPage() {
 			if (proxyStatus().running) {
 				const status = await stopProxy();
 				setProxyStatus(status);
-				toastStore.info("Proxy stopped");
+				toastStore.info(t("dashboard.toasts.proxyStopped"));
 			} else {
 				const status = await startProxy();
 				setProxyStatus(status);
-				toastStore.success("Proxy started", `Listening on port ${status.port}`);
+				toastStore.success(
+					t("dashboard.toasts.proxyStarted"),
+					t("dashboard.toasts.listeningOnPort", { port: status.port }),
+				);
 			}
 		} catch (error) {
 			console.error("Failed to toggle proxy:", error);
-			toastStore.error("Failed to toggle proxy", String(error));
+			toastStore.error(
+				t("dashboard.toasts.failedToToggleProxy"),
+				String(error),
+			);
 		} finally {
 			setToggling(false);
 		}
@@ -304,8 +312,8 @@ export function DashboardPage() {
 	const handleConnect = async (provider: Provider) => {
 		if (!proxyStatus().running) {
 			toastStore.warning(
-				"Start proxy first",
-				"The proxy must be running to connect accounts",
+				t("dashboard.toasts.startProxyFirst"),
+				t("dashboard.toasts.proxyMustRunToConnectAccounts"),
 			);
 			return;
 		}
@@ -314,8 +322,8 @@ export function DashboardPage() {
 		if (provider === "vertex") {
 			setConnecting(provider);
 			toastStore.info(
-				"Import Vertex service account",
-				"Select your service account JSON file",
+				t("dashboard.toasts.importVertexServiceAccount"),
+				t("dashboard.toasts.selectServiceAccountJson"),
 			);
 			try {
 				const selected = await open({
@@ -326,8 +334,8 @@ export function DashboardPage() {
 				if (!selectedPath) {
 					setConnecting(null);
 					toastStore.warning(
-						"No file selected",
-						"Choose a service account JSON",
+						t("dashboard.toasts.noFileSelected"),
+						t("dashboard.toasts.chooseServiceAccountJson"),
 					);
 					return;
 				}
@@ -344,13 +352,13 @@ export function DashboardPage() {
 					});
 				}, 2000);
 				toastStore.success(
-					"Vertex connected!",
-					"Service account imported successfully",
+					t("dashboard.toasts.vertexConnected"),
+					t("dashboard.toasts.serviceAccountImportedSuccessfully"),
 				);
 			} catch (error) {
 				console.error("Vertex import failed:", error);
 				setConnecting(null);
-				toastStore.error("Connection failed", String(error));
+				toastStore.error(t("dashboard.toasts.connectionFailed"), String(error));
 			}
 			return;
 		}
@@ -365,7 +373,7 @@ export function DashboardPage() {
 		} catch (error) {
 			console.error("Failed to get OAuth URL:", error);
 			setConnecting(null);
-			toastStore.error("Connection failed", String(error));
+			toastStore.error(t("dashboard.toasts.connectionFailed"), String(error));
 		}
 	};
 
@@ -380,8 +388,10 @@ export function DashboardPage() {
 			// Open the browser with the OAuth URL
 			await openUrlInBrowser(urlData.url);
 			toastStore.info(
-				`Connecting to ${getProviderName(provider)}...`,
-				"Complete authentication in your browser",
+				t("dashboard.toasts.connectingToProvider", {
+					provider: getProviderName(provider),
+				}),
+				t("dashboard.toasts.completeAuthenticationInBrowser"),
 			);
 
 			// Start polling for OAuth completion
@@ -425,13 +435,18 @@ export function DashboardPage() {
 							});
 						}, 2000);
 						toastStore.success(
-							`${getProviderName(provider)} connected!`,
-							"You can now use this provider",
+							t("dashboard.toasts.providerConnected", {
+								provider: getProviderName(provider),
+							}),
+							t("dashboard.toasts.youCanNowUseThisProvider"),
 						);
 					} else if (attempts >= maxAttempts) {
 						clearInterval(pollInterval);
 						setOauthLoading(false);
-						toastStore.error("Connection timeout", "Please try again");
+						toastStore.error(
+							t("dashboard.toasts.connectionTimeout"),
+							t("dashboard.toasts.pleaseTryAgain"),
+						);
 					}
 				} catch (err) {
 					console.error("Poll error:", err);
@@ -441,7 +456,7 @@ export function DashboardPage() {
 		} catch (error) {
 			console.error("Failed to open OAuth:", error);
 			setOauthLoading(false);
-			toastStore.error("Connection failed", String(error));
+			toastStore.error(t("dashboard.toasts.connectionFailed"), String(error));
 		}
 	};
 
@@ -488,20 +503,25 @@ export function DashboardPage() {
 					});
 				}, 2000);
 				toastStore.success(
-					`${getProviderName(provider)} connected!`,
-					"You can now use this provider",
+					t("dashboard.toasts.providerConnected", {
+						provider: getProviderName(provider),
+					}),
+					t("dashboard.toasts.youCanNowUseThisProvider"),
 				);
 			} else {
 				setOauthLoading(false);
 				toastStore.warning(
-					"Not authorized yet",
-					"Please complete authorization in your browser first",
+					t("dashboard.toasts.notAuthorizedYet"),
+					t("dashboard.toasts.completeAuthorizationInBrowserFirst"),
 				);
 			}
 		} catch (err) {
 			console.error("Check auth error:", err);
 			setOauthLoading(false);
-			toastStore.error("Failed to check authorization", String(err));
+			toastStore.error(
+				t("dashboard.toasts.failedToCheckAuthorization"),
+				String(err),
+			);
 		}
 	};
 
@@ -516,10 +536,14 @@ export function DashboardPage() {
 			await disconnectProvider(provider);
 			const newAuth = await refreshAuthStatus();
 			setAuthStatus(newAuth);
-			toastStore.success(`${provider} disconnected`);
+			toastStore.success(
+				t("dashboard.toasts.providerDisconnected", {
+					provider: getProviderName(provider),
+				}),
+			);
 		} catch (error) {
 			console.error("Failed to disconnect:", error);
-			toastStore.error("Failed to disconnect", String(error));
+			toastStore.error(t("dashboard.toasts.failedToDisconnect"), String(error));
 		}
 	};
 
@@ -534,11 +558,17 @@ export function DashboardPage() {
 		if (!result?.result.shellConfig) return;
 		try {
 			const profilePath = await appendToShellProfile(result.result.shellConfig);
-			toastStore.success("Added to shell profile", `Updated ${profilePath}`);
+			toastStore.success(
+				t("settings.toasts.addedToShellProfile"),
+				t("settings.toasts.updatedPath", { path: profilePath }),
+			);
 			setConfigResult(null);
 			await loadAgents();
 		} catch (error) {
-			toastStore.error("Failed to update shell profile", String(error));
+			toastStore.error(
+				t("settings.toasts.failedToUpdateShellProfile"),
+				String(error),
+			);
 		}
 	};
 
@@ -602,13 +632,13 @@ export function DashboardPage() {
 			<header class="sticky top-0 z-10 px-4 sm:px-6 py-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
 				<div class="flex items-center justify-between max-w-3xl mx-auto">
 					<h1 class="font-semibold text-lg text-gray-900 dark:text-gray-100">
-						Dashboard
+						{t("sidebar.dashboard")}
 					</h1>
 					<div class="flex items-center gap-3">
 						<button
 							onClick={openCommandPalette}
 							class="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 transition-colors"
-							title="Command Palette (⌘K)"
+							title={t("dashboard.commandPalette")}
 						>
 							<svg
 								class="w-4 h-4"
@@ -647,10 +677,10 @@ export function DashboardPage() {
 						<div class="p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-brand-50 to-purple-50 dark:from-brand-900/30 dark:to-purple-900/20 border border-brand-200 dark:border-brand-800/50">
 							<div class="mb-4">
 								<h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">
-									Get Started
+									{t("dashboard.onboarding.getStarted")}
 								</h2>
 								<p class="text-sm text-gray-600 dark:text-gray-400">
-									Complete these steps to start saving
+									{t("dashboard.onboarding.completeSteps")}
 								</p>
 							</div>
 							<div class="space-y-3">
@@ -681,10 +711,10 @@ export function DashboardPage() {
 									</div>
 									<div class="flex-1">
 										<p class="font-medium text-gray-900 dark:text-gray-100">
-											Start the proxy
+											{t("dashboard.onboarding.startProxy")}
 										</p>
 										<p class="text-xs text-gray-500 dark:text-gray-400">
-											Enable the local proxy server
+											{t("dashboard.onboarding.enableLocalProxy")}
 										</p>
 									</div>
 									<Show when={!proxyStatus().running}>
@@ -694,7 +724,9 @@ export function DashboardPage() {
 											onClick={toggleProxy}
 											disabled={toggling()}
 										>
-											{toggling() ? "Starting..." : "Start"}
+											{toggling()
+												? t("dashboard.onboarding.starting")
+												: t("dashboard.onboarding.start")}
 										</Button>
 									</Show>
 								</div>
@@ -725,10 +757,10 @@ export function DashboardPage() {
 									</div>
 									<div class="flex-1">
 										<p class="font-medium text-gray-900 dark:text-gray-100">
-											Connect a provider
+											{t("dashboard.checklist.connectProvider")}
 										</p>
 										<p class="text-xs text-gray-500 dark:text-gray-400">
-											Link Claude, Gemini, or ChatGPT
+											{t("dashboard.checklist.connectProviderDescription")}
 										</p>
 									</div>
 									<Show when={!hasAnyProvider() && proxyStatus().running}>
@@ -740,7 +772,7 @@ export function DashboardPage() {
 												if (first) handleConnect(first.provider);
 											}}
 										>
-											Connect
+											{t("dashboard.checklist.connect")}
 										</Button>
 									</Show>
 								</div>
@@ -771,10 +803,10 @@ export function DashboardPage() {
 									</div>
 									<div class="flex-1">
 										<p class="font-medium text-gray-900 dark:text-gray-100">
-											Configure an agent
+											{t("dashboard.checklist.configureAgent")}
 										</p>
 										<p class="text-xs text-gray-500 dark:text-gray-400">
-											Set up Cursor, Claude Code, etc.
+											{t("dashboard.checklist.configureAgentDescription")}
 										</p>
 									</div>
 									<Show when={!hasConfiguredAgent() && hasAnyProvider()}>
@@ -783,7 +815,7 @@ export function DashboardPage() {
 											variant="secondary"
 											onClick={() => setCurrentPage("settings")}
 										>
-											Setup
+											{t("dashboard.checklist.setup")}
 										</Button>
 									</Show>
 								</div>
@@ -800,25 +832,31 @@ export function DashboardPage() {
 					>
 						<div class="grid grid-cols-3 gap-3">
 							<KpiTile
-								label="Total Requests"
+								label={t("dashboard.kpi.totalRequests")}
 								value={formatTokens(
 									stats()?.totalRequests || history().requests.length,
 								)}
-								subtext={`${stats()?.requestsToday || 0} today`}
+								subtext={t("dashboard.kpi.requestsToday", {
+									count: stats()?.requestsToday || 0,
+								})}
 								icon="bolt"
 								onClick={() => setCurrentPage("analytics")}
 							/>
 							<KpiTile
-								label="Success Rate"
+								label={t("dashboard.kpi.successRate")}
 								value={`${stats() && stats()!.totalRequests > 0 ? Math.min(100, Math.round((stats()!.successCount / stats()!.totalRequests) * 100)) : 100}%`}
-								subtext={`${stats()?.failureCount || 0} failed`}
+								subtext={t("dashboard.kpi.failedCount", {
+									count: stats()?.failureCount || 0,
+								})}
 								icon="check"
 								onClick={() => setCurrentPage("analytics")}
 							/>
 							<KpiTile
-								label="Est. Cost"
+								label={t("dashboard.kpi.estimatedCost")}
 								value={formatCost(estimatedCost())}
-								subtext={`${formatTokens(stats()?.totalTokens || 0)} tokens`}
+								subtext={t("dashboard.kpi.tokensCount", {
+									count: formatTokens(stats()?.totalTokens || 0),
+								})}
 								icon="dollar"
 								onClick={() => setCurrentPage("analytics")}
 							/>
@@ -829,10 +867,12 @@ export function DashboardPage() {
 					<div class="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
 						<div class="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700">
 							<span class="text-sm font-semibold text-gray-900 dark:text-gray-100">
-								Providers
+								{t("dashboard.providers.title")}
 							</span>
 							<span class="text-xs text-gray-500 dark:text-gray-400">
-								{connectedProviders().length} connected
+								{t("dashboard.providers.connectedCount", {
+									count: connectedProviders().length,
+								})}
 							</span>
 						</div>
 
@@ -865,7 +905,7 @@ export function DashboardPage() {
 													onClick={() => handleConnect(p.provider)}
 													disabled={connecting() !== null}
 													class="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-green-600 dark:hover:text-green-400 transition-opacity disabled:opacity-30"
-													title="Add another account"
+													title={t("dashboard.providers.addAnotherAccount")}
 												>
 													{connecting() === p.provider ? (
 														<svg
@@ -908,7 +948,7 @@ export function DashboardPage() {
 												<button
 													onClick={() => handleDisconnect(p.provider)}
 													class="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity -mr-1"
-													title="Disconnect all accounts (manage individually in Settings → Auth Files)"
+													title={t("dashboard.providers.disconnectAll")}
 												>
 													<svg
 														class="w-3.5 h-3.5"
@@ -936,7 +976,7 @@ export function DashboardPage() {
 							<div class="p-3">
 								<Show when={!proxyStatus().running}>
 									<p class="text-xs text-amber-600 dark:text-amber-400 mb-2">
-										Start proxy to connect providers
+										{t("dashboard.providers.startProxyToConnect")}
 									</p>
 								</Show>
 								<div class="flex flex-wrap gap-2">
@@ -1035,7 +1075,9 @@ export function DashboardPage() {
 								<div class="p-6">
 									<div class="flex items-center justify-between mb-4">
 										<h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">
-											{configResult()!.agentName} Configured
+											{t("agentSetup.configModal.agentConfigured", {
+												agent: configResult()!.agentName,
+											})}
 										</h2>
 										<button
 											onClick={() => setConfigResult(null)}
@@ -1075,7 +1117,7 @@ export function DashboardPage() {
 														/>
 													</svg>
 													<span class="text-sm font-medium">
-														Config file created
+														{t("agentSetup.configModal.configFileCreated")}
 													</span>
 												</div>
 												<p class="mt-1 text-xs text-green-600 dark:text-green-400 font-mono break-all">
@@ -1094,10 +1136,11 @@ export function DashboardPage() {
 											<div class="space-y-2">
 												<div class="flex items-center justify-between">
 													<span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-														Models Configured
+														{t("dashboard.configModal.modelsConfigured")}
 													</span>
 													<span class="text-xs text-gray-500 dark:text-gray-400">
-														{configResult()?.models?.length ?? 0} total
+														{configResult()?.models?.length ?? 0}{" "}
+														{t("dashboard.configModal.total")}
 													</span>
 												</div>
 												<div class="max-h-48 overflow-y-auto space-y-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
@@ -1137,7 +1180,7 @@ export function DashboardPage() {
 										<Show when={configResult()!.result.shellConfig}>
 											<div class="space-y-2">
 												<span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-													Environment Variables
+													{t("agentSetup.configModal.environmentVariables")}
 												</span>
 												<pre class="p-3 rounded-lg bg-gray-100 dark:bg-gray-800 text-xs font-mono text-gray-700 dark:text-gray-300 overflow-x-auto whitespace-pre-wrap">
 													{configResult()!.result.shellConfig}
@@ -1148,7 +1191,9 @@ export function DashboardPage() {
 													onClick={handleApplyEnv}
 													class="w-full"
 												>
-													Add to Shell Profile Automatically
+													{t(
+														"agentSetup.configModal.addToShellProfileAutomatically",
+													)}
 												</Button>
 											</div>
 										</Show>
@@ -1165,7 +1210,7 @@ export function DashboardPage() {
 											variant="primary"
 											onClick={() => setConfigResult(null)}
 										>
-											Done
+											{t("agentSetup.configModal.done")}
 										</Button>
 									</div>
 								</div>
@@ -1193,6 +1238,7 @@ export function DashboardPage() {
 
 // Antigravity Quota Widget - shows remaining quota for each model with chart/list views
 function QuotaWidget(props: { authStatus: { antigravity: number } }) {
+	const { t } = useI18n();
 	const [quotaData, setQuotaData] = createSignal<AntigravityQuotaResult[]>([]);
 	const [loading, setLoading] = createSignal(false);
 	const [error, setError] = createSignal<string | null>(null);
@@ -1405,12 +1451,13 @@ function QuotaWidget(props: { authStatus: { antigravity: number } }) {
 						class="w-5 h-5 rounded"
 					/>
 					<span class="text-sm font-semibold text-gray-900 dark:text-gray-100">
-						Antigravity Quota
+						{t("dashboard.antigravity.title")}
 					</span>
 					<Show when={quotaData().length > 0}>
 						<span class="text-xs text-gray-500 dark:text-gray-400">
-							({quotaData().length} account{quotaData().length !== 1 ? "s" : ""}
-							)
+							{t("dashboard.antigravity.accountsCount", {
+								count: quotaData().length,
+							})}
 						</span>
 					</Show>
 				</div>
@@ -1422,7 +1469,7 @@ function QuotaWidget(props: { authStatus: { antigravity: number } }) {
 						}}
 						disabled={loading()}
 						class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-50"
-						title="Refresh quota"
+						title={t("dashboard.quota.refresh")}
 					>
 						<svg
 							class={`w-4 h-4 ${loading() ? "animate-spin" : ""}`}
@@ -1462,7 +1509,7 @@ function QuotaWidget(props: { authStatus: { antigravity: number } }) {
 						class="w-full px-4 py-2 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-700/50"
 					>
 						<span class="text-xs font-medium text-gray-600 dark:text-gray-400">
-							Filters & View
+							{t("dashboard.antigravity.filtersAndView")}
 						</span>
 						<svg
 							class={`w-3 h-3 text-gray-400 transition-transform ${filtersExpanded() ? "rotate-180" : ""}`}
@@ -1484,19 +1531,19 @@ function QuotaWidget(props: { authStatus: { antigravity: number } }) {
 							{/* View Mode Toggle */}
 							<div class="flex items-center gap-2">
 								<span class="text-xs text-gray-600 dark:text-gray-400">
-									View:
+									{t("dashboard.antigravity.view")}:
 								</span>
 								<button
 									onClick={() => setViewMode("chart")}
 									class={`px-3 py-1 text-xs rounded ${viewMode() === "chart" ? "bg-blue-500 text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"}`}
 								>
-									Chart
+									{t("dashboard.antigravity.chart")}
 								</button>
 								<button
 									onClick={() => setViewMode("list")}
 									class={`px-3 py-1 text-xs rounded ${viewMode() === "list" ? "bg-blue-500 text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"}`}
 								>
-									List
+									{t("dashboard.antigravity.list")}
 								</button>
 							</div>
 
@@ -1504,7 +1551,7 @@ function QuotaWidget(props: { authStatus: { antigravity: number } }) {
 							<Show when={availableAccounts().length > 1}>
 								<div>
 									<p class="text-xs text-gray-500 dark:text-gray-400 mb-1">
-										Accounts:
+										{t("dashboard.antigravity.accounts")}:
 									</p>
 									<div class="flex flex-wrap gap-1">
 										<For each={availableAccounts()}>
@@ -1539,12 +1586,14 @@ function QuotaWidget(props: { authStatus: { antigravity: number } }) {
 								<div>
 									<div class="flex items-center justify-between mb-2">
 										<p class="text-xs text-gray-500 dark:text-gray-400">
-											Models:
+											{t("dashboard.antigravity.models")}:
 										</p>
 										<span class="text-[10px] text-gray-400">
 											{selectedModels().size > 0
-												? `${selectedModels().size} selected`
-												: "All"}
+												? t("dashboard.antigravity.selectedCount", {
+														count: selectedModels().size,
+													})
+												: t("dashboard.antigravity.all")}
 										</span>
 									</div>
 									<div class="space-y-2 max-h-48 overflow-y-auto pr-1">
@@ -1573,8 +1622,8 @@ function QuotaWidget(props: { authStatus: { antigravity: number } }) {
 															{group.models.every((m) =>
 																selectedModels().has(m),
 															)
-																? "Deselect all"
-																: "Select all"}
+																? t("dashboard.antigravity.deselectAll")
+																: t("dashboard.antigravity.selectAll")}
 														</button>
 													</div>
 													<div class="p-2 grid grid-cols-2 gap-1">
@@ -1624,7 +1673,7 @@ function QuotaWidget(props: { authStatus: { antigravity: number } }) {
 									}}
 									class="text-xs px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600"
 								>
-									Show All
+									{t("dashboard.antigravity.showAll")}
 								</button>
 								<button
 									onClick={() => {
@@ -1640,7 +1689,7 @@ function QuotaWidget(props: { authStatus: { antigravity: number } }) {
 									}}
 									class="text-xs px-2 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600"
 								>
-									Low Quota (&lt;50%)
+									{t("dashboard.antigravity.lowQuotaUnder50")}
 								</button>
 							</div>
 						</div>
@@ -1662,11 +1711,11 @@ function QuotaWidget(props: { authStatus: { antigravity: number } }) {
 								/>
 							</svg>
 							<span class="text-sm font-medium text-yellow-800 dark:text-yellow-300">
-								Low Quota Alert
+								{t("dashboard.antigravity.lowQuotaAlert")}
 							</span>
 						</div>
 						<p class="mt-1 text-xs text-yellow-700 dark:text-yellow-400">
-							Some models have less than 30% quota remaining
+							{t("dashboard.antigravity.lowQuotaDescription")}
 						</p>
 					</div>
 				</Show>
@@ -1851,8 +1900,8 @@ function QuotaWidget(props: { authStatus: { antigravity: number } }) {
 					>
 						<p class="text-sm text-gray-500 text-center py-2">
 							{quotaData().length === 0
-								? "No Antigravity accounts found"
-								: "No matching quota data"}
+								? t("dashboard.antigravity.noAccountsFound")
+								: t("dashboard.antigravity.noMatchingQuotaData")}
 						</p>
 					</Show>
 				</div>
@@ -1863,6 +1912,7 @@ function QuotaWidget(props: { authStatus: { antigravity: number } }) {
 
 // Copilot Quota Widget - shows premium interactions and chat quotas for GitHub Copilot
 function CopilotQuotaWidget() {
+	const { t } = useI18n();
 	const [quotaData, setQuotaData] = createSignal<CopilotQuotaResult[]>([]);
 	const [loading, setLoading] = createSignal(false);
 	const [error, setError] = createSignal<string | null>(null);
@@ -1910,12 +1960,13 @@ function CopilotQuotaWidget() {
 				<div class="flex items-center gap-2">
 					<img src="/logos/github.svg" alt="GitHub" class="w-5 h-5 rounded" />
 					<span class="text-sm font-semibold text-gray-900 dark:text-gray-100">
-						GitHub Copilot Quota
+						{t("dashboard.quota.githubCopilotTitle")}
 					</span>
 					<Show when={quotaData().length > 0}>
 						<span class="text-xs text-gray-500 dark:text-gray-400">
-							({quotaData().length} account{quotaData().length !== 1 ? "s" : ""}
-							)
+							{t("dashboard.antigravity.accountsCount", {
+								count: quotaData().length,
+							})}
 						</span>
 					</Show>
 				</div>
@@ -1927,7 +1978,7 @@ function CopilotQuotaWidget() {
 						}}
 						disabled={loading()}
 						class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-50"
-						title="Refresh quota"
+						title={t("dashboard.quota.refresh")}
 					>
 						<svg
 							class={`w-4 h-4 ${loading() ? "animate-spin" : ""}`}
@@ -1982,7 +2033,7 @@ function CopilotQuotaWidget() {
 									d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
 								/>
 							</svg>
-							Loading quota...
+							{t("dashboard.quota.loadingQuota")}
 						</div>
 					</Show>
 
@@ -2006,7 +2057,7 @@ function CopilotQuotaWidget() {
 									</div>
 									<Show when={account.error}>
 										<span class="text-[10px] text-red-500 font-medium">
-											API Error
+											{t("dashboard.quota.apiError")}
 										</span>
 									</Show>
 								</div>
@@ -2015,13 +2066,16 @@ function CopilotQuotaWidget() {
 									<div>
 										<div class="flex items-center justify-between mb-1">
 											<span class="text-xs text-gray-500">
-												Premium Interactions
+												{t("dashboard.quota.premiumInteractions")}
 											</span>
 											<span
 												class={`text-xs font-medium ${getUsageColor(account.premiumInteractionsPercent, true)}`}
 											>
-												{(100 - account.premiumInteractionsPercent).toFixed(0)}%
-												used
+												{t("dashboard.quota.percentUsed", {
+													count: (
+														100 - account.premiumInteractionsPercent
+													).toFixed(0),
+												})}
 											</span>
 										</div>
 										<div class="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
@@ -2037,11 +2091,15 @@ function CopilotQuotaWidget() {
 									{/* Chat (remaining %) */}
 									<div>
 										<div class="flex items-center justify-between mb-1">
-											<span class="text-xs text-gray-500">Chat</span>
+											<span class="text-xs text-gray-500">
+												{t("dashboard.quota.chat")}
+											</span>
 											<span
 												class={`text-xs font-medium ${getUsageColor(account.chatPercent, true)}`}
 											>
-												{(100 - account.chatPercent).toFixed(0)}% used
+												{t("dashboard.quota.percentUsed", {
+													count: (100 - account.chatPercent).toFixed(0),
+												})}
 											</span>
 										</div>
 										<div class="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
@@ -2066,7 +2124,7 @@ function CopilotQuotaWidget() {
 
 					<Show when={!loading() && quotaData().length === 0 && !error()}>
 						<p class="text-sm text-gray-500 text-center py-2">
-							No Copilot accounts found
+							{t("dashboard.quota.noCopilotAccounts")}
 						</p>
 					</Show>
 				</div>
@@ -2077,6 +2135,7 @@ function CopilotQuotaWidget() {
 
 // Claude Quota Widget - shows session and weekly quotas for Claude accounts
 function ClaudeQuotaWidget() {
+	const { t } = useI18n();
 	const [quotaData, setQuotaData] = createSignal<ClaudeQuotaResult[]>([]);
 	const [loading, setLoading] = createSignal(false);
 	const [error, setError] = createSignal<string | null>(null);
@@ -2101,11 +2160,11 @@ function ClaudeQuotaWidget() {
 	});
 
 	const formatResetTime = (timestamp?: number) => {
-		if (!timestamp) return "Unknown";
+		if (!timestamp) return t("dashboard.quota.unknown");
 		const date = new Date(timestamp * 1000);
 		const now = new Date();
 		const diff = date.getTime() - now.getTime();
-		if (diff <= 0) return "Now";
+		if (diff <= 0) return t("dashboard.quota.now");
 		const hours = Math.floor(diff / (1000 * 60 * 60));
 		const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
 		if (hours > 24) {
@@ -2138,7 +2197,7 @@ function ClaudeQuotaWidget() {
 				<div class="flex items-center gap-2">
 					<img src="/logos/claude.svg" alt="Claude" class="w-5 h-5 rounded" />
 					<span class="text-sm font-semibold text-gray-900 dark:text-gray-100">
-						Claude Quota
+						{t("dashboard.quota.claudeTitle")}
 					</span>
 					<Show when={quotaData().length > 0}>
 						<span class="text-xs text-gray-500 dark:text-gray-400">
@@ -2155,7 +2214,7 @@ function ClaudeQuotaWidget() {
 						}}
 						disabled={loading()}
 						class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-50"
-						title="Refresh quota"
+						title={t("dashboard.quota.refresh")}
 					>
 						<svg
 							class={`w-4 h-4 ${loading() ? "animate-spin" : ""}`}
@@ -2210,7 +2269,7 @@ function ClaudeQuotaWidget() {
 									d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
 								/>
 							</svg>
-							Loading quota...
+							{t("dashboard.quota.loadingQuota")}
 						</div>
 					</Show>
 
@@ -2234,7 +2293,7 @@ function ClaudeQuotaWidget() {
 									</div>
 									<Show when={account.error}>
 										<span class="text-[10px] text-red-500 font-medium">
-											API Error
+											{t("dashboard.quota.apiError")}
 										</span>
 									</Show>
 								</div>
@@ -2242,11 +2301,15 @@ function ClaudeQuotaWidget() {
 									{/* 5-Hour Session */}
 									<div>
 										<div class="flex items-center justify-between mb-1">
-											<span class="text-xs text-gray-500">5-Hour Session</span>
+											<span class="text-xs text-gray-500">
+												{t("dashboard.quota.fiveHourSession")}
+											</span>
 											<span
 												class={`text-xs font-medium ${getUsageColor(account.fiveHourPercent)}`}
 											>
-												{account.fiveHourPercent.toFixed(0)}% used
+												{t("dashboard.quota.percentUsed", {
+													count: account.fiveHourPercent.toFixed(0),
+												})}
 											</span>
 										</div>
 										<div class="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
@@ -2258,18 +2321,24 @@ function ClaudeQuotaWidget() {
 											/>
 										</div>
 										<p class="text-[10px] text-gray-400 mt-0.5">
-											Resets in {formatResetTime(account.fiveHourResetAt)}
+											{t("dashboard.quota.resetsIn", {
+												time: formatResetTime(account.fiveHourResetAt),
+											})}
 										</p>
 									</div>
 
 									{/* 7-Day Weekly */}
 									<div>
 										<div class="flex items-center justify-between mb-1">
-											<span class="text-xs text-gray-500">7-Day Weekly</span>
+											<span class="text-xs text-gray-500">
+												{t("dashboard.quota.sevenDayWeekly")}
+											</span>
 											<span
 												class={`text-xs font-medium ${getUsageColor(account.sevenDayPercent)}`}
 											>
-												{account.sevenDayPercent.toFixed(0)}% used
+												{t("dashboard.quota.percentUsed", {
+													count: account.sevenDayPercent.toFixed(0),
+												})}
 											</span>
 										</div>
 										<div class="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
@@ -2281,7 +2350,9 @@ function ClaudeQuotaWidget() {
 											/>
 										</div>
 										<p class="text-[10px] text-gray-400 mt-0.5">
-											Resets in {formatResetTime(account.sevenDayResetAt)}
+											{t("dashboard.quota.resetsIn", {
+												time: formatResetTime(account.sevenDayResetAt),
+											})}
 										</p>
 									</div>
 
@@ -2294,7 +2365,9 @@ function ClaudeQuotaWidget() {
 									>
 										<div class="pt-2 border-t border-gray-100 dark:border-gray-700">
 											<div class="flex items-center justify-between">
-												<span class="text-xs text-gray-500">Extra Usage</span>
+												<span class="text-xs text-gray-500">
+													{t("dashboard.quota.extraUsage")}
+												</span>
 												<span class="text-sm font-medium text-gray-700 dark:text-gray-300">
 													${account.extraUsageSpend?.toFixed(2) ?? "0.00"} / $
 													{account.extraUsageLimit?.toFixed(0) ?? "0"}
@@ -2315,7 +2388,7 @@ function ClaudeQuotaWidget() {
 
 					<Show when={!loading() && quotaData().length === 0 && !error()}>
 						<p class="text-sm text-gray-500 text-center py-2">
-							No Claude accounts found
+							{t("dashboard.quota.noClaudeAccounts")}
 						</p>
 					</Show>
 				</div>
@@ -2326,6 +2399,7 @@ function ClaudeQuotaWidget() {
 
 // Codex Quota Widget - shows rate limits and credits for OpenAI/Codex accounts
 function CodexQuotaWidget(props: { authStatus: { openai: number } }) {
+	const { t } = useI18n();
 	const [quotaData, setQuotaData] = createSignal<CodexQuotaResult[]>([]);
 	const [loading, setLoading] = createSignal(false);
 	const [error, setError] = createSignal<string | null>(null);
@@ -2351,11 +2425,11 @@ function CodexQuotaWidget(props: { authStatus: { openai: number } }) {
 	});
 
 	const formatResetTime = (timestamp?: number) => {
-		if (!timestamp) return "Unknown";
+		if (!timestamp) return t("dashboard.quota.unknown");
 		const date = new Date(timestamp * 1000);
 		const now = new Date();
 		const diff = date.getTime() - now.getTime();
-		if (diff <= 0) return "Now";
+		if (diff <= 0) return t("dashboard.quota.now");
 		const hours = Math.floor(diff / (1000 * 60 * 60));
 		const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
 		if (hours > 24) {
@@ -2390,7 +2464,7 @@ function CodexQuotaWidget(props: { authStatus: { openai: number } }) {
 				<div class="flex items-center gap-2">
 					<img src="/logos/openai.svg" alt="OpenAI" class="w-5 h-5 rounded" />
 					<span class="text-sm font-semibold text-gray-900 dark:text-gray-100">
-						OpenAI (Codex) Quota
+						{t("dashboard.quota.codexTitle")}
 					</span>
 					<Show when={quotaData().length > 0}>
 						<span class="text-xs text-gray-500 dark:text-gray-400">
@@ -2407,7 +2481,7 @@ function CodexQuotaWidget(props: { authStatus: { openai: number } }) {
 						}}
 						disabled={loading()}
 						class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-50"
-						title="Refresh quota"
+						title={t("dashboard.quota.refresh")}
 					>
 						<svg
 							class={`w-4 h-4 ${loading() ? "animate-spin" : ""}`}
@@ -2462,7 +2536,7 @@ function CodexQuotaWidget(props: { authStatus: { openai: number } }) {
 									d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
 								/>
 							</svg>
-							Loading usage...
+							{t("dashboard.quota.loadingUsage")}
 						</div>
 					</Show>
 
@@ -2486,7 +2560,7 @@ function CodexQuotaWidget(props: { authStatus: { openai: number } }) {
 									</div>
 									<Show when={account.error}>
 										<span class="text-[10px] text-red-500 font-medium">
-											API Error
+											{t("dashboard.quota.apiError")}
 										</span>
 									</Show>
 								</div>
@@ -2495,12 +2569,14 @@ function CodexQuotaWidget(props: { authStatus: { openai: number } }) {
 									<div>
 										<div class="flex items-center justify-between mb-1">
 											<span class="text-xs text-gray-500">
-												Primary Limit (3h)
+												{t("dashboard.quota.primaryLimit3h")}
 											</span>
 											<span
 												class={`text-xs font-medium ${getUsageColor(account.primaryUsedPercent)}`}
 											>
-												{account.primaryUsedPercent.toFixed(0)}% used
+												{t("dashboard.quota.percentUsed", {
+													count: account.primaryUsedPercent.toFixed(0),
+												})}
 											</span>
 										</div>
 										<div class="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
@@ -2512,18 +2588,24 @@ function CodexQuotaWidget(props: { authStatus: { openai: number } }) {
 											/>
 										</div>
 										<p class="text-[10px] text-gray-400 mt-0.5">
-											Resets in {formatResetTime(account.primaryResetAt)}
+											{t("dashboard.quota.resetsIn", {
+												time: formatResetTime(account.primaryResetAt),
+											})}
 										</p>
 									</div>
 
 									{/* Secondary Rate Limit (weekly window) */}
 									<div>
 										<div class="flex items-center justify-between mb-1">
-											<span class="text-xs text-gray-500">Weekly Limit</span>
+											<span class="text-xs text-gray-500">
+												{t("dashboard.quota.weeklyLimit")}
+											</span>
 											<span
 												class={`text-xs font-medium ${getUsageColor(account.secondaryUsedPercent)}`}
 											>
-												{account.secondaryUsedPercent.toFixed(0)}% used
+												{t("dashboard.quota.percentUsed", {
+													count: account.secondaryUsedPercent.toFixed(0),
+												})}
 											</span>
 										</div>
 										<div class="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
@@ -2535,7 +2617,9 @@ function CodexQuotaWidget(props: { authStatus: { openai: number } }) {
 											/>
 										</div>
 										<p class="text-[10px] text-gray-400 mt-0.5">
-											Resets in {formatResetTime(account.secondaryResetAt)}
+											{t("dashboard.quota.resetsIn", {
+												time: formatResetTime(account.secondaryResetAt),
+											})}
 										</p>
 									</div>
 
@@ -2544,14 +2628,14 @@ function CodexQuotaWidget(props: { authStatus: { openai: number } }) {
 										<div class="pt-2 border-t border-gray-100 dark:border-gray-700">
 											<div class="flex items-center justify-between">
 												<span class="text-xs text-gray-500">
-													Credits Balance
+													{t("dashboard.quota.creditsBalance")}
 												</span>
 												<span class="text-sm font-bold text-green-600 dark:text-green-400">
 													{account.creditsUnlimited
-														? "Unlimited"
+														? t("dashboard.quota.unlimited")
 														: account.creditsBalance !== undefined
 															? `$${account.creditsBalance.toFixed(2)}`
-															: "N/A"}
+															: t("dashboard.quota.notAvailable")}
 												</span>
 											</div>
 										</div>
@@ -2569,7 +2653,7 @@ function CodexQuotaWidget(props: { authStatus: { openai: number } }) {
 
 					<Show when={!loading() && quotaData().length === 0 && !error()}>
 						<p class="text-sm text-gray-500 text-center py-2">
-							No Codex accounts found in ~/.cli-proxy-api
+							{t("dashboard.quota.noCodexAccounts")}
 						</p>
 					</Show>
 				</div>
@@ -2580,6 +2664,7 @@ function CodexQuotaWidget(props: { authStatus: { openai: number } }) {
 
 // Kiro Quota Widget - shows agentic AI credits for Kiro accounts
 function KiroQuotaWidget() {
+	const { t } = useI18n();
 	const [quotaData, setQuotaData] = createSignal<KiroQuotaResult[]>([]);
 	const [loading, setLoading] = createSignal(false);
 	const [expanded, setExpanded] = createSignal(false);
@@ -2610,11 +2695,13 @@ function KiroQuotaWidget() {
 				<div class="flex items-center gap-2">
 					<img src="/logos/kiro.svg" alt="Kiro" class="w-5 h-5 rounded" />
 					<span class="text-sm font-semibold text-gray-900 dark:text-gray-100">
-						Kiro Quota
+						{t("dashboard.kiro.title")}
 					</span>
 					<Show when={quotaData().length > 0}>
 						<span class="text-xs text-gray-500 dark:text-gray-400">
-							({quotaData().length} account{quotaData().length !== 1 ? "s" : ""})
+							{t("dashboard.antigravity.accountsCount", {
+								count: quotaData().length,
+							})}
 						</span>
 					</Show>
 				</div>
@@ -2627,7 +2714,7 @@ function KiroQuotaWidget() {
 						}}
 						disabled={loading()}
 						class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-50"
-						title="Refresh quota"
+						title={t("dashboard.quota.refresh")}
 					>
 						<svg
 							class={`w-4 h-4 ${loading() ? "animate-spin" : ""}`}
@@ -2705,7 +2792,9 @@ function KiroQuotaWidget() {
 								<Show when={quota.totalCredits > 0}>
 									<div class="space-y-1">
 										<div class="flex items-center justify-between">
-											<span class="text-xs text-gray-500 dark:text-gray-400">Plan Credits</span>
+											<span class="text-xs text-gray-500 dark:text-gray-400">
+												Plan Credits
+											</span>
 											<div class="flex items-center gap-2">
 												<Show when={quota.resetsOn}>
 													<span class="text-[10px] text-brand-600 dark:text-brand-400">
@@ -2713,7 +2802,8 @@ function KiroQuotaWidget() {
 													</span>
 												</Show>
 												<span class="text-xs font-medium text-gray-900 dark:text-gray-100">
-														{quota.usedCredits.toFixed(2)} / {quota.totalCredits} used
+													{quota.usedCredits.toFixed(2)} / {quota.totalCredits}{" "}
+													used
 												</span>
 											</div>
 										</div>
@@ -2731,10 +2821,20 @@ function KiroQuotaWidget() {
 									<div class="space-y-1">
 										<div class="flex items-center justify-between">
 											<div class="flex items-center gap-1.5">
-												<svg class="w-3.5 h-3.5 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
-													<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
+												<svg
+													class="w-3.5 h-3.5 text-amber-500"
+													fill="currentColor"
+													viewBox="0 0 20 20"
+												>
+													<path
+														fill-rule="evenodd"
+														d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
+														clip-rule="evenodd"
+													/>
 												</svg>
-												<span class="text-xs text-gray-500 dark:text-gray-400">Bonus Credits</span>
+												<span class="text-xs text-gray-500 dark:text-gray-400">
+													Bonus Credits
+												</span>
 											</div>
 											<div class="flex items-center gap-2">
 												<Show when={quota.bonusCreditsExpiresDays}>
@@ -2743,14 +2843,17 @@ function KiroQuotaWidget() {
 													</span>
 												</Show>
 												<span class="text-xs font-medium text-gray-900 dark:text-gray-100">
-													{quota.bonusCreditsUsed.toFixed(2)} / {quota.bonusCreditsTotal} used
+													{quota.bonusCreditsUsed.toFixed(2)} /{" "}
+													{quota.bonusCreditsTotal} used
 												</span>
 											</div>
 										</div>
 										<div class="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
 											<div
 												class="h-full bg-amber-500 transition-all duration-300"
-												style={{ width: `${(quota.bonusCreditsUsed / quota.bonusCreditsTotal) * 100}%` }}
+												style={{
+													width: `${(quota.bonusCreditsUsed / quota.bonusCreditsTotal) * 100}%`,
+												}}
 											/>
 										</div>
 									</div>
@@ -2788,7 +2891,8 @@ function KiroQuotaWidget() {
 
 					<Show when={!loading() && quotaData().length === 0}>
 						<div class="py-4 text-center text-sm text-gray-500 dark:text-gray-400">
-							No Kiro quota data. Install kiro-cli and sign in, or check app.kiro.dev.
+							No Kiro quota data. Install kiro-cli and sign in, or check
+							app.kiro.dev.
 						</div>
 					</Show>
 				</div>

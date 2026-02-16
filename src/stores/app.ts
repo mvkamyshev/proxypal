@@ -1,4 +1,9 @@
 import { createRoot, createSignal, onCleanup } from "solid-js";
+import {
+	detectSystemLocale,
+	normalizeLocale,
+	resolveInitialLocale,
+} from "../i18n/locale";
 import type {
 	AppConfig,
 	AuthStatus,
@@ -79,6 +84,7 @@ function createAppStore() {
 			rateLimitWait: false,
 		},
 		sshConfigs: [],
+		locale: "en",
 	});
 
 	// SSH Status
@@ -134,22 +140,38 @@ function createAppStore() {
 			]);
 
 			updateProxyStatus(proxyState);
-			setConfig(configState);
+
+			let nextConfig: AppConfig = { ...configState };
+			let shouldSave = false;
+
+			const systemLocale = await detectSystemLocale();
+			const resolvedLocale = resolveInitialLocale(
+				configState.locale,
+				systemLocale,
+			);
+			if (nextConfig.locale !== resolvedLocale) {
+				nextConfig = { ...nextConfig, locale: resolvedLocale };
+				shouldSave = true;
+			}
 
 			// Auto-migrate amp model mappings when slot models change across versions
-			if (configState.ampModelMappings?.length) {
-				const result = migrateAmpModelMappings(configState.ampModelMappings);
+			if (nextConfig.ampModelMappings?.length) {
+				const result = migrateAmpModelMappings(nextConfig.ampModelMappings);
 				if (result.migrated) {
-					const updatedConfig = {
-						...configState,
+					nextConfig = {
+						...nextConfig,
 						ampModelMappings: result.mappings,
 					};
-					setConfig(updatedConfig);
-					await saveConfig(updatedConfig);
+					shouldSave = true;
 					console.log(
 						"[ProxyPal] Auto-migrated amp model mappings to new slot models",
 					);
 				}
+			}
+
+			setConfig(nextConfig);
+			if (shouldSave) {
+				await saveConfig(nextConfig);
 			}
 
 			// Refresh auth status from CLIProxyAPI's auth directory
@@ -213,7 +235,7 @@ function createAppStore() {
 			});
 
 			// Auto-start proxy if configured
-			if (configState.autoStart) {
+			if (nextConfig.autoStart) {
 				try {
 					const status = await startProxy();
 					updateProxyStatus(status);
@@ -246,6 +268,15 @@ function createAppStore() {
 		}
 	};
 
+	const setLocale = (locale: string) => {
+		const normalized = normalizeLocale(locale);
+		const newConfig = { ...config(), locale: normalized };
+		setConfig(newConfig);
+		void saveConfig(newConfig).catch((error) => {
+			console.error("Failed to save locale:", error);
+		});
+	};
+
 	return {
 		// Proxy
 		proxyStatus,
@@ -259,6 +290,7 @@ function createAppStore() {
 		// Config
 		config,
 		setConfig,
+		setLocale,
 
 		// SSH
 		sshStatus,

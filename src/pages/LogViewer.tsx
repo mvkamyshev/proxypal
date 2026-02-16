@@ -9,6 +9,7 @@ import {
 } from "solid-js";
 import { EmptyState } from "../components/EmptyState";
 import { Button } from "../components/ui";
+import { useI18n } from "../i18n";
 import {
 	clearLogs,
 	getLogs,
@@ -35,6 +36,7 @@ const DISPLAY_CHUNK_SIZE = 100;
 type LogTab = "server" | "errors";
 
 export function LogViewerPage() {
+	const { t } = useI18n();
 	const { proxyStatus } = appStore;
 	const [activeTab, setActiveTab] = createSignal<LogTab>("server");
 	const [logs, setLogs] = createSignal<LogEntry[]>([]);
@@ -119,7 +121,7 @@ export function LogViewerPage() {
 				});
 			}
 		} catch (err) {
-			toastStore.error(`Failed to load logs: ${err}`);
+			toastStore.error(t("logs.toasts.failedToLoadLogs"), String(err));
 		} finally {
 			setLoading(false);
 			setInitialLoad(false);
@@ -168,9 +170,9 @@ export function LogViewerPage() {
 			await clearLogs();
 			setLogs([]);
 			setShowClearConfirm(false);
-			toastStore.success("Logs cleared");
+			toastStore.success(t("logs.toasts.logsCleared"));
 		} catch (err) {
-			toastStore.error(`Failed to clear logs: ${err}`);
+			toastStore.error(t("logs.toasts.failedToClearLogs"), String(err));
 		}
 	};
 
@@ -203,7 +205,7 @@ export function LogViewerPage() {
 			const content = await getRequestErrorLogContent(filename);
 			setErrorLogContent(content);
 		} catch (err) {
-			toastStore.error(`Failed to load error log: ${err}`);
+			toastStore.error(t("logs.toasts.failedToLoadErrorLog"), String(err));
 			setErrorLogContent("");
 		} finally {
 			setLoadingErrorLogs(false);
@@ -237,7 +239,7 @@ export function LogViewerPage() {
 		a.download = `proxypal-logs-${new Date().toISOString().split("T")[0]}.txt`;
 		a.click();
 		URL.revokeObjectURL(url);
-		toastStore.success("Logs downloaded");
+		toastStore.success(t("logs.toasts.logsDownloaded"));
 	};
 
 	const logCounts = () => {
@@ -264,7 +266,7 @@ export function LogViewerPage() {
 				<div class="flex items-center justify-between">
 					<div class="flex items-center gap-2 sm:gap-3">
 						<h1 class="font-semibold text-lg text-gray-900 dark:text-gray-100">
-							Logs
+							{t("logs.title")}
 						</h1>
 
 						{/* Tab switcher */}
@@ -277,7 +279,7 @@ export function LogViewerPage() {
 										: "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
 								}`}
 							>
-								Server
+								{t("logs.tabs.server")}
 							</button>
 							<button
 								onClick={() => setActiveTab("errors")}
@@ -287,7 +289,7 @@ export function LogViewerPage() {
 										: "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
 								}`}
 							>
-								Errors
+								{t("logs.tabs.errors")}
 							</button>
 						</div>
 
@@ -312,7 +314,7 @@ export function LogViewerPage() {
 										d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
 									/>
 								</svg>
-								Loading
+								{t("common.loading")}
 							</span>
 						</Show>
 					</div>
@@ -327,7 +329,9 @@ export function LogViewerPage() {
 									: "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
 							}`}
 							title={
-								autoRefresh() ? "Stop auto-refresh" : "Start auto-refresh (30s)"
+								autoRefresh()
+									? t("logs.actions.stopAutoRefresh")
+									: t("logs.actions.startAutoRefresh")
 							}
 						>
 							<Show
@@ -351,7 +355,7 @@ export function LogViewerPage() {
 							onClick={loadLogs}
 							disabled={loading()}
 							class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
-							title="Refresh now"
+							title={t("logs.actions.refreshNow")}
 						>
 							<svg
 								class={`w-5 h-5 ${loading() ? "animate-spin" : ""}`}
@@ -373,7 +377,7 @@ export function LogViewerPage() {
 							<button
 								onClick={handleDownload}
 								class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-								title="Download logs"
+								title={t("logs.actions.downloadLogs")}
 							>
 								<svg
 									class="w-5 h-5"
@@ -397,7 +401,7 @@ export function LogViewerPage() {
 								onClick={() => setShowClearConfirm(true)}
 								class="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
 							>
-								Clear
+								{t("logs.actions.clear")}
 							</Button>
 						</Show>
 					</div>
@@ -425,8 +429,8 @@ export function LogViewerPage() {
 									/>
 								</svg>
 							}
-							title="Proxy Not Running"
-							description="Start the proxy server to view logs."
+							title={t("logs.proxyNotRunning")}
+							description={t("logs.proxyNotRunningDescription")}
 						/>
 					</div>
 				</Show>
@@ -440,11 +444,11 @@ export function LogViewerPage() {
 							<div class="flex items-center gap-1">
 								<For
 									each={[
-										{ id: "all", label: "All" },
-										{ id: "ERROR", label: "Error" },
-										{ id: "WARN", label: "Warn" },
-										{ id: "INFO", label: "Info" },
-										{ id: "DEBUG", label: "Debug" },
+										{ id: "all", label: t("logs.levels.all") },
+										{ id: "ERROR", label: t("logs.levels.error") },
+										{ id: "WARN", label: t("logs.levels.warn") },
+										{ id: "INFO", label: t("logs.levels.info") },
+										{ id: "DEBUG", label: t("logs.levels.debug") },
 									]}
 								>
 									{(level) => (
@@ -476,7 +480,7 @@ export function LogViewerPage() {
 									type="text"
 									value={search()}
 									onInput={(e) => setSearch(e.currentTarget.value)}
-									placeholder="Search logs..."
+									placeholder={t("logs.searchPlaceholder")}
 									class="w-full px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-smooth"
 								/>
 							</div>
@@ -523,11 +527,11 @@ export function LogViewerPage() {
 														/>
 													</svg>
 												}
-												title="No Logs"
+												title={t("logs.noLogs")}
 												description={
 													search() || filter() !== "all"
-														? "No logs match your filters."
-														: "Logs will appear here once the proxy handles requests."
+														? t("logs.noLogsMatchFilters")
+														: t("logs.logsWillAppear")
 												}
 											/>
 										</div>
@@ -541,13 +545,14 @@ export function LogViewerPage() {
 													onClick={loadMoreLogs}
 													class="text-xs text-brand-500 hover:text-brand-600 dark:text-brand-400 dark:hover:text-brand-300 font-medium"
 												>
-													↑ Load{" "}
+													{t("logs.loadOlderPrefix")}{" "}
 													{Math.min(
 														DISPLAY_CHUNK_SIZE,
 														filteredLogs().length - displayLimit(),
 													)}{" "}
-													older logs ({filteredLogs().length - displayLimit()}{" "}
-													remaining)
+													{t("logs.loadOlderMiddle")} (
+													{filteredLogs().length - displayLimit()}{" "}
+													{t("logs.remaining")})
 												</button>
 											</div>
 										</Show>
@@ -595,8 +600,8 @@ export function LogViewerPage() {
 										fallback={
 											<div class="text-xs text-gray-400 dark:text-gray-500 p-2 text-center">
 												{loadingErrorLogs()
-													? "Loading..."
-													: "No error logs found"}
+													? t("common.loading") + "..."
+													: t("logs.noErrorLogsFound")}
 											</div>
 										}
 									>
@@ -643,13 +648,13 @@ export function LogViewerPage() {
 												}
 												title={
 													loadingErrorLogs()
-														? "Loading..."
-														: "Select an Error Log"
+														? t("common.loading") + "..."
+														: t("logs.selectAnErrorLog")
 												}
 												description={
 													loadingErrorLogs()
-														? "Loading error log content..."
-														: "Select a log file from the left to view its contents."
+														? t("logs.loadingErrorLogContent")
+														: t("logs.selectLogFromLeft")
 												}
 											/>
 										</div>
@@ -670,25 +675,26 @@ export function LogViewerPage() {
 				<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
 					<div class="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full mx-4 border border-gray-200 dark:border-gray-700 shadow-xl">
 						<h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-							Clear All Logs?
+							{t("logs.modals.clearAllLogsTitle")}
 						</h3>
 						<p class="text-gray-600 dark:text-gray-400 mb-6">
-							This will permanently delete all {logs().length} log entries. This
-							action cannot be undone.
+							{t("logs.modals.clearAllLogsDescription", {
+								count: logs().length,
+							})}
 						</p>
 						<div class="flex justify-end gap-3">
 							<Button
 								variant="ghost"
 								onClick={() => setShowClearConfirm(false)}
 							>
-								Cancel
+								{t("common.cancel")}
 							</Button>
 							<Button
 								variant="primary"
 								onClick={handleClear}
 								class="bg-red-500 hover:bg-red-600"
 							>
-								Clear Logs
+								{t("logs.actions.clearLogs")}
 							</Button>
 						</div>
 					</div>

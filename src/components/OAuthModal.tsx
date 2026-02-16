@@ -1,4 +1,5 @@
 import { createSignal, Show } from "solid-js";
+import { useI18n } from "../i18n";
 import type { Provider } from "../lib/tauri";
 import { toastStore } from "../stores/toast";
 import { Button } from "./ui";
@@ -28,15 +29,16 @@ interface OAuthModalProps {
 
 export function OAuthModal(props: OAuthModalProps) {
 	const [copied, setCopied] = createSignal(false);
+	const { t } = useI18n();
 
 	const handleCopy = async () => {
 		try {
 			await navigator.clipboard.writeText(props.authUrl);
 			setCopied(true);
-			toastStore.success("Copied to clipboard!");
+			toastStore.success(t("common.copied"));
 			setTimeout(() => setCopied(false), 2000);
 		} catch {
-			toastStore.error("Failed to copy");
+			toastStore.error(t("common.copyFailed"));
 		}
 	};
 
@@ -64,10 +66,10 @@ export function OAuthModal(props: OAuthModalProps) {
 							</div>
 							<div>
 								<h3 class="font-semibold text-gray-900 dark:text-gray-100">
-									Connect {props.providerName}
+									{t("oauth.connect", { provider: props.providerName })}
 								</h3>
 								<p class="text-xs text-gray-500 dark:text-gray-400">
-									Authenticate with your account
+									{t("oauth.authenticateAccount")}
 								</p>
 							</div>
 						</div>
@@ -96,13 +98,13 @@ export function OAuthModal(props: OAuthModalProps) {
 									d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
 								/>
 							</svg>
-							Start OAuth
+							{t("oauth.startOAuth")}
 						</Button>
 
 						{/* Authorization URL Section */}
 						<div class="space-y-1.5">
 							<label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-								Authorization URL
+								{t("oauth.authorizationUrl")}
 							</label>
 							<div class="flex items-center gap-2 bg-gray-50 dark:bg-gray-900 rounded-lg px-3 py-2.5 border border-gray-200 dark:border-gray-600">
 								{/* URL Text */}
@@ -114,7 +116,7 @@ export function OAuthModal(props: OAuthModalProps) {
 								<button
 									class="flex-shrink-0 p-1.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
 									onClick={handleCopy}
-									title="Copy URL"
+									title={t("oauth.copyUrl")}
 								>
 									{copied() ? (
 										<svg
@@ -177,7 +179,7 @@ export function OAuthModal(props: OAuthModalProps) {
 									d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
 								/>
 							</svg>
-							I already authorized
+							{t("oauth.alreadyAuthorized")}
 						</button>
 
 						{/* Cancel Button - Dark background */}
@@ -185,7 +187,7 @@ export function OAuthModal(props: OAuthModalProps) {
 							class="w-full py-2.5 text-sm font-medium text-gray-300 bg-gray-700 dark:bg-gray-900 hover:bg-gray-600 dark:hover:bg-gray-800 rounded-lg transition-colors border border-gray-600 dark:border-gray-700"
 							onClick={props.onCancel}
 						>
-							Cancel
+							{t("common.cancel")}
 						</button>
 					</div>
 				</div>

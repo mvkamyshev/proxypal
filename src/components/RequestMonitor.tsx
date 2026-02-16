@@ -1,4 +1,5 @@
 import { createSignal, For, onCleanup, onMount, Show } from "solid-js";
+import { useI18n } from "../i18n";
 import { clearRequestHistory, onRequestLog } from "../lib/tauri";
 import { appStore } from "../stores/app";
 import { requestStore } from "../stores/requests";
@@ -31,7 +32,7 @@ const statusColors: Record<number, string> = {
 
 function formatTime(timestamp: number): string {
 	const date = new Date(timestamp);
-	return date.toLocaleTimeString("en-US", {
+	return date.toLocaleTimeString(undefined, {
 		hour12: false,
 		hour: "2-digit",
 		minute: "2-digit",
@@ -39,18 +40,21 @@ function formatTime(timestamp: number): string {
 	});
 }
 
-function formatDate(timestamp: number): string {
+function formatDate(
+	timestamp: number,
+	t: (key: string, params?: Record<string, string | number>) => string,
+): string {
 	const date = new Date(timestamp);
 	const today = new Date();
 	const yesterday = new Date(today);
 	yesterday.setDate(yesterday.getDate() - 1);
 
 	if (date.toDateString() === today.toDateString()) {
-		return "Today";
+		return t("requestMonitor.today");
 	} else if (date.toDateString() === yesterday.toDateString()) {
-		return "Yesterday";
+		return t("requestMonitor.yesterday");
 	}
-	return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+	return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
 function formatDuration(ms: number): string {
@@ -70,6 +74,7 @@ function formatTokens(tokens: number): string {
 }
 
 export function RequestMonitor() {
+	const { t } = useI18n();
 	const { proxyStatus } = appStore;
 	// Use centralized store instead of local state
 	const history = requestStore.history;
@@ -140,7 +145,7 @@ export function RequestMonitor() {
 							class={`w-2 h-2 rounded-full ${proxyStatus().running ? "bg-green-500 animate-pulse" : "bg-gray-400"}`}
 						/>
 						<span class="font-medium text-gray-900 dark:text-gray-100 text-sm">
-							Request History
+							{t("requestMonitor.requestHistory")}
 						</span>
 					</div>
 					<Show when={hasRequests()}>
@@ -157,14 +162,14 @@ export function RequestMonitor() {
 								<span class="text-green-600 dark:text-green-400 font-medium">
 									{formatCost(history().totalCostUsd)}
 								</span>
-								<span>saved</span>
+								<span>{t("requestMonitor.saved")}</span>
 							</span>
 							<span class="text-gray-300 dark:text-gray-600">|</span>
 							<span>
 								{formatTokens(
 									history().totalTokensIn + history().totalTokensOut,
 								)}{" "}
-								tokens
+								{t("requestMonitor.tokens")}
 							</span>
 						</div>
 						<button
@@ -174,7 +179,7 @@ export function RequestMonitor() {
 								handleClear();
 							}}
 						>
-							Clear
+							{t("requestMonitor.clear")}
 						</button>
 					</Show>
 					<svg
@@ -201,7 +206,7 @@ export function RequestMonitor() {
 						<div class="px-4 py-2 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-b border-gray-200 dark:border-gray-700 sm:hidden">
 							<div class="flex items-center justify-between text-xs">
 								<span class="text-gray-600 dark:text-gray-400">
-									Est. savings:{" "}
+									{t("requestMonitor.estimatedSavings")}:{" "}
 									<span class="font-semibold text-green-600 dark:text-green-400">
 										{formatCost(history().totalCostUsd)}
 									</span>
@@ -210,7 +215,7 @@ export function RequestMonitor() {
 									{formatTokens(
 										history().totalTokensIn + history().totalTokensOut,
 									)}{" "}
-									tokens
+									{t("requestMonitor.tokens")}
 								</span>
 							</div>
 						</div>
@@ -241,7 +246,9 @@ export function RequestMonitor() {
 												d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
 											/>
 										</svg>
-										<span class="text-sm">Loading history...</span>
+										<span class="text-sm">
+											{t("requestMonitor.loadingHistory")}
+										</span>
 									</div>
 								</Show>
 								<Show when={!loading()}>
@@ -262,9 +269,11 @@ export function RequestMonitor() {
 														d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
 													/>
 												</svg>
-												<p class="text-sm font-medium">Proxy is offline</p>
+												<p class="text-sm font-medium">
+													{t("requestMonitor.proxyOffline")}
+												</p>
 												<p class="text-xs mt-1 text-gray-400">
-													Start the proxy to begin tracking requests
+													{t("requestMonitor.startProxyToTrack")}
 												</p>
 											</div>
 										}
@@ -283,15 +292,18 @@ export function RequestMonitor() {
 													d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
 												/>
 											</svg>
-											<p class="text-sm font-medium">Waiting for requests</p>
+											<p class="text-sm font-medium">
+												{t("requestMonitor.waitingForRequests")}
+											</p>
 											<p class="text-xs mt-1 text-gray-400 max-w-xs mx-auto">
-												Open your AI tool (Cursor, Claude Code, etc.) and make a
-												request. It will appear here automatically.
+												{t("requestMonitor.waitingDescription")}
 											</p>
 											<div class="flex items-center justify-center gap-2 mt-3">
 												<div class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
 												<span class="text-xs text-green-600 dark:text-green-400">
-													Proxy listening on port {proxyStatus().port}
+													{t("requestMonitor.proxyListeningOnPort", {
+														port: proxyStatus().port,
+													})}
 												</span>
 											</div>
 										</div>
@@ -313,7 +325,7 @@ export function RequestMonitor() {
 										{/* Timestamp */}
 										<div class="flex flex-col items-end w-16 flex-shrink-0">
 											<span class="text-[10px] text-gray-400 dark:text-gray-500">
-												{formatDate(log.timestamp)}
+												{formatDate(log.timestamp, t)}
 											</span>
 											<span class="text-xs text-gray-500 dark:text-gray-400 font-mono">
 												{formatTime(log.timestamp)}
@@ -365,6 +377,7 @@ export function RequestMonitor() {
 
 // Compact version for embedding in other components
 export function RequestMonitorCompact() {
+	const { t } = useI18n();
 	const { proxyStatus } = appStore;
 	// Use centralized store
 	const history = requestStore.history;
@@ -385,22 +398,32 @@ export function RequestMonitorCompact() {
 		<div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
 			<Show
 				when={proxyStatus().running}
-				fallback={<span class="text-gray-400">Proxy offline</span>}
+				fallback={
+					<span class="text-gray-400">
+						{t("requestMonitor.proxyOfflineCompact")}
+					</span>
+				}
 			>
 				<div class="flex items-center gap-1.5">
 					<div class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-					<span>{history().requests.length} requests</span>
+					<span>
+						{t("requestMonitor.requestsCount", {
+							count: history().requests.length,
+						})}
+					</span>
 				</div>
 				<Show when={history().totalCostUsd > 0}>
 					<span class="text-gray-400">|</span>
 					<span class="text-green-600 dark:text-green-400 font-medium">
-						{formatCost(history().totalCostUsd)} saved
+						{t("requestMonitor.costSaved", {
+							cost: formatCost(history().totalCostUsd),
+						})}
 					</span>
 				</Show>
 				<Show when={latestLog()}>
 					<span class="text-gray-400">|</span>
 					<span>
-						Last: {latestLog()!.provider} (
+						{t("requestMonitor.last")} {latestLog()!.provider} (
 						{formatDuration(latestLog()!.durationMs)})
 					</span>
 				</Show>
