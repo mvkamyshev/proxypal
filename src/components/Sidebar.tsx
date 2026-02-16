@@ -6,6 +6,7 @@ import {
 	onMount,
 	Show,
 } from "solid-js";
+import { useI18n } from "../i18n";
 import {
 	checkForUpdates,
 	downloadAndInstallUpdate,
@@ -24,7 +25,6 @@ type PageId =
 
 interface NavItem {
 	id: PageId;
-	label: string;
 	icon: Component<{ class?: string }>;
 }
 
@@ -131,15 +131,16 @@ const PinIcon: Component<{ class?: string; pinned?: boolean }> = (props) => (
 );
 
 const navItems: NavItem[] = [
-	{ id: "dashboard", label: "Dashboard", icon: DashboardIcon },
-	{ id: "api-keys", label: "API Keys", icon: ApiKeysIcon },
-	{ id: "auth-files", label: "Auth Files", icon: AuthFilesIcon },
-	{ id: "logs", label: "Logs", icon: LogsIcon },
-	{ id: "analytics", label: "Analytics", icon: AnalyticsIcon },
-	{ id: "settings", label: "Settings", icon: SettingsIcon },
+	{ id: "dashboard", icon: DashboardIcon },
+	{ id: "api-keys", icon: ApiKeysIcon },
+	{ id: "auth-files", icon: AuthFilesIcon },
+	{ id: "logs", icon: LogsIcon },
+	{ id: "analytics", icon: AnalyticsIcon },
+	{ id: "settings", icon: SettingsIcon },
 ];
 
 export const Sidebar: Component = () => {
+	const { t } = useI18n();
 	const {
 		currentPage,
 		setCurrentPage,
@@ -216,6 +217,25 @@ export const Sidebar: Component = () => {
 		setSidebarExpanded(newState);
 	};
 
+	const getNavLabel = (id: PageId) => {
+		switch (id) {
+			case "dashboard":
+				return t("sidebar.dashboard");
+			case "api-keys":
+				return t("sidebar.apiKeys");
+			case "auth-files":
+				return t("sidebar.authFiles");
+			case "logs":
+				return t("sidebar.logs");
+			case "analytics":
+				return t("sidebar.analytics");
+			case "settings":
+				return t("sidebar.settings");
+			default:
+				return id;
+		}
+	};
+
 	return (
 		<div
 			class="fixed left-0 top-0 h-screen z-40 flex flex-col bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transition-all duration-200"
@@ -268,7 +288,9 @@ export const Sidebar: Component = () => {
 								"text-gray-500 dark:text-gray-400": !proxyStatus().running,
 							}}
 						>
-							{proxyStatus().running ? "Proxy Running" : "Proxy Stopped"}
+							{proxyStatus().running
+								? t("sidebar.proxyRunning")
+								: t("sidebar.proxyStopped")}
 						</span>
 					</Show>
 				</div>
@@ -286,12 +308,14 @@ export const Sidebar: Component = () => {
 						"text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white":
 							!isPinned(),
 					}}
-					title={!isExpanded() ? "Pin sidebar" : "Unpin sidebar"}
+					title={
+						!isExpanded() ? t("sidebar.pinSidebar") : t("sidebar.unpinSidebar")
+					}
 				>
 					<PinIcon class="w-5 h-5 flex-shrink-0" pinned={isPinned()} />
 					<Show when={isExpanded()}>
 						<span class="text-sm font-medium whitespace-nowrap overflow-hidden">
-							{isPinned() ? "Unpin" : "Pin"}
+							{isPinned() ? t("sidebar.unpin") : t("sidebar.pin")}
 						</span>
 					</Show>
 				</button>
@@ -311,12 +335,12 @@ export const Sidebar: Component = () => {
 								"text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white":
 									!isActive(item.id),
 							}}
-							title={!isExpanded() ? item.label : undefined}
+							title={!isExpanded() ? getNavLabel(item.id) : undefined}
 						>
 							<item.icon class="w-5 h-5 flex-shrink-0" />
 							<Show when={isExpanded()}>
 								<span class="text-sm font-medium whitespace-nowrap overflow-hidden">
-									{item.label}
+									{getNavLabel(item.id)}
 								</span>
 							</Show>
 						</button>
@@ -332,7 +356,11 @@ export const Sidebar: Component = () => {
 						onClick={handleUpdate}
 						disabled={isUpdating()}
 						class="w-full flex items-center gap-3 px-2.5 py-2 rounded-lg bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors"
-						title={!isExpanded() ? `Update to ${updateVersion()}` : undefined}
+						title={
+							!isExpanded()
+								? t("sidebar.updateTo", { version: updateVersion() })
+								: undefined
+						}
 					>
 						<Show
 							when={!isUpdating()}
@@ -374,7 +402,9 @@ export const Sidebar: Component = () => {
 						</Show>
 						<Show when={isExpanded()}>
 							<span class="text-sm font-medium whitespace-nowrap overflow-hidden">
-								{isUpdating() ? "Updating..." : `Update ${updateVersion()}`}
+								{isUpdating()
+									? t("sidebar.updating")
+									: t("sidebar.updateTo", { version: updateVersion() })}
 							</span>
 						</Show>
 					</button>
@@ -391,7 +421,7 @@ export const Sidebar: Component = () => {
 						)
 					}
 					class="w-full flex items-center gap-3 px-2.5 py-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition-colors"
-					title={!isExpanded() ? "Toggle Theme" : undefined}
+					title={!isExpanded() ? t("sidebar.toggleTheme") : undefined}
 				>
 					<Show
 						when={themeStore.resolvedTheme() === "dark"}
@@ -421,8 +451,8 @@ export const Sidebar: Component = () => {
 					<Show when={isExpanded()}>
 						<span class="text-sm font-medium whitespace-nowrap overflow-hidden">
 							{themeStore.resolvedTheme() === "dark"
-								? "Light Mode"
-								: "Dark Mode"}
+								? t("sidebar.lightMode")
+								: t("sidebar.darkMode")}
 						</span>
 					</Show>
 				</button>

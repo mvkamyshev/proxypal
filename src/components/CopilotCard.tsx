@@ -1,4 +1,5 @@
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
+import { useI18n } from "../i18n";
 import type {
 	CopilotApiDetection,
 	CopilotConfig,
@@ -26,6 +27,7 @@ interface CopilotCardProps {
 }
 
 export function CopilotCard(props: CopilotCardProps) {
+	const { t } = useI18n();
 	const [status, setStatus] = createSignal<CopilotStatus>({
 		running: false,
 		port: 4141,
@@ -75,8 +77,8 @@ export function CopilotCard(props: CopilotCardProps) {
 			const urlMatch = message.match(/https:\/\/github\.com\/login\/device/);
 			if (urlMatch) {
 				toastStore.info(
-					"GitHub Authentication Required",
-					"Check the terminal for your device code, then visit github.com/login/device",
+					t("copilot.toasts.githubAuthenticationRequired"),
+					t("copilot.toasts.checkTerminalForDeviceCode"),
 				);
 			}
 		});
@@ -119,7 +121,7 @@ export function CopilotCard(props: CopilotCardProps) {
 			}
 		} catch (err) {
 			console.error("Failed to save copilot config:", err);
-			toastStore.error("Failed to save settings", String(err));
+			toastStore.error(t("copilot.toasts.failedToSaveSettings"), String(err));
 		}
 	};
 
@@ -135,20 +137,20 @@ export function CopilotCard(props: CopilotCardProps) {
 
 			if (newStatus.authenticated) {
 				toastStore.success(
-					"GitHub Copilot Connected",
-					"Models are now available through the proxy",
+					t("copilot.toasts.githubCopilotConnected"),
+					t("copilot.toasts.modelsNowAvailableThroughProxy"),
 				);
 			} else {
 				toastStore.info(
-					"Copilot Starting...",
-					"Complete GitHub authentication if prompted",
+					t("copilot.toasts.copilotStarting"),
+					t("copilot.toasts.completeGithubAuthenticationIfPrompted"),
 				);
 			}
 		} catch (err) {
 			console.error("Failed to start copilot:", err);
 			const errorMsg = String(err);
 			setStartError(errorMsg);
-			toastStore.error("Failed to start Copilot", errorMsg);
+			toastStore.error(t("copilot.toasts.failedToStartCopilot"), errorMsg);
 		} finally {
 			setStarting(false);
 		}
@@ -161,10 +163,10 @@ export function CopilotCard(props: CopilotCardProps) {
 		try {
 			const newStatus = await stopCopilot();
 			setStatus(newStatus);
-			toastStore.info("Copilot Stopped");
+			toastStore.info(t("copilot.toasts.copilotStopped"));
 		} catch (err) {
 			console.error("Failed to stop copilot:", err);
-			toastStore.error("Failed to stop Copilot", String(err));
+			toastStore.error(t("copilot.toasts.failedToStopCopilot"), String(err));
 		} finally {
 			setStopping(false);
 		}
@@ -195,7 +197,7 @@ export function CopilotCard(props: CopilotCardProps) {
 							GitHub Copilot
 						</span>
 						<p class="text-xs text-gray-500 dark:text-gray-400">
-							Free AI models via Copilot subscription
+							{t("copilot.subtitle")}
 						</p>
 					</div>
 				</div>
@@ -216,19 +218,19 @@ export function CopilotCard(props: CopilotCardProps) {
 							/>
 							<span class="text-xs text-gray-500 dark:text-gray-400">
 								{isConnected()
-									? "Connected"
+									? t("copilot.status.connected")
 									: isRunningNotAuth()
-										? "Authenticating..."
+										? t("copilot.status.authenticating")
 										: status().running
-											? "Running"
-											: "Offline"}
+											? t("copilot.status.running")
+											: t("copilot.status.offline")}
 							</span>
 						</div>
 					</Show>
 					<Switch
 						checked={props.config.enabled}
 						onChange={handleToggleEnabled}
-						label="Enable"
+						label={t("copilot.actions.enable")}
 					/>
 				</div>
 			</div>
@@ -255,11 +257,10 @@ export function CopilotCard(props: CopilotCardProps) {
 								</svg>
 								<div class="flex-1">
 									<p class="text-sm font-medium text-amber-800 dark:text-amber-200">
-										GitHub Authentication Required
+										{t("copilot.githubAuthenticationRequired")}
 									</p>
 									<p class="text-xs text-amber-700 dark:text-amber-300 mt-1">
-										Check the terminal for your device code, then click below to
-										authenticate.
+										{t("copilot.authHelpDescription")}
 									</p>
 									<Button
 										size="sm"
@@ -274,7 +275,7 @@ export function CopilotCard(props: CopilotCardProps) {
 										>
 											<path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0112 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z" />
 										</svg>
-										Open GitHub Authentication
+										{t("copilot.actions.openGithubAuthentication")}
 									</Button>
 								</div>
 							</div>
@@ -300,14 +301,14 @@ export function CopilotCard(props: CopilotCardProps) {
 								</svg>
 								<div class="flex-1">
 									<p class="text-sm font-medium text-red-800 dark:text-red-200">
-										Failed to Start Copilot
+										{t("copilot.failedToStartCopilot")}
 									</p>
 									<p class="text-xs text-red-700 dark:text-red-300 mt-1 whitespace-pre-wrap">
 										{startError()}
 									</p>
 									<div class="mt-2 p-2 bg-red-100 dark:bg-red-900/30 rounded text-xs text-red-700 dark:text-red-300">
 										<p class="font-medium">
-											💡 Quick fix - run manually in terminal:
+											{t("copilot.quickFixRunManually")}
 										</p>
 										<code class="block mt-1 font-mono text-red-800 dark:text-red-200">
 											bunx copilot-api start --port 4141
@@ -328,9 +329,9 @@ export function CopilotCard(props: CopilotCardProps) {
 											}}
 											class="underline font-medium hover:text-red-800 dark:hover:text-red-200"
 										>
-											Settings → Copilot API Detection
+											{t("copilot.settingsCopilotApiDetection")}
 										</a>{" "}
-										for more details.
+										{t("copilot.forMoreDetails")}
 									</p>
 								</div>
 							</div>
@@ -355,12 +356,11 @@ export function CopilotCard(props: CopilotCardProps) {
 									/>
 								</svg>
 								<span class="text-sm font-medium">
-									GitHub Copilot is connected
+									{t("copilot.githubCopilotConnectedInline")}
 								</span>
 							</div>
 							<p class="mt-1 text-xs text-green-600 dark:text-green-400">
-								Available models: GPT-4o, Claude Sonnet 4, Claude Opus 4.5, and
-								more
+								{t("copilot.availableModelsDescription")}
 							</p>
 						</div>
 					</Show>
@@ -395,10 +395,10 @@ export function CopilotCard(props: CopilotCardProps) {
 												d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
 											/>
 										</svg>
-										Starting...
+										{t("copilot.actions.starting")}
 									</span>
 								) : (
-									"Start Copilot"
+									t("copilot.actions.startCopilot")
 								)}
 							</Button>
 						</Show>
@@ -409,13 +409,15 @@ export function CopilotCard(props: CopilotCardProps) {
 								onClick={handleStop}
 								disabled={stopping()}
 							>
-								{stopping() ? "Stopping..." : "Stop"}
+								{stopping()
+									? t("copilot.actions.stopping")
+									: t("copilot.actions.stop")}
 							</Button>
 						</Show>
 						<button
 							onClick={() => setExpanded(!expanded())}
 							class="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-							title="Advanced settings"
+							title={t("copilot.actions.advancedSettings")}
 						>
 							<svg
 								class={`w-4 h-4 transition-transform ${expanded() ? "rotate-180" : ""}`}
@@ -436,7 +438,7 @@ export function CopilotCard(props: CopilotCardProps) {
 					{/* Proxy not running warning */}
 					<Show when={!props.proxyRunning}>
 						<p class="text-xs text-amber-600 dark:text-amber-400">
-							Start the proxy first to use Copilot
+							{t("copilot.startProxyFirstToUseCopilot")}
 						</p>
 					</Show>
 
@@ -459,10 +461,12 @@ export function CopilotCard(props: CopilotCardProps) {
 												d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
 											/>
 										</svg>
-										<span class="text-sm font-medium">Node.js Required</span>
+										<span class="text-sm font-medium">
+											{t("copilot.nodeJsRequired")}
+										</span>
 									</div>
 									<p class="mt-1 text-xs text-red-600 dark:text-red-400">
-										Install Node.js from{" "}
+										{t("copilot.installNodeJsFrom")}{" "}
 										<a
 											href="https://nodejs.org"
 											target="_blank"
@@ -495,7 +499,7 @@ export function CopilotCard(props: CopilotCardProps) {
 							<span>
 								copilot-api
 								{apiDetection()?.version ? ` v${apiDetection()?.version}` : ""}{" "}
-								installed
+								{t("copilot.installed")}
 							</span>
 						</div>
 					</Show>
@@ -505,7 +509,7 @@ export function CopilotCard(props: CopilotCardProps) {
 						<div class="pt-3 border-t border-gray-100 dark:border-gray-700 space-y-3">
 							<div>
 								<label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-									Port
+									{t("copilot.port")}
 								</label>
 								<input
 									type="number"
@@ -521,7 +525,7 @@ export function CopilotCard(props: CopilotCardProps) {
 							</div>
 							<div>
 								<label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-									Account Type
+									{t("copilot.accountType")}
 								</label>
 								<select
 									value={props.config.accountType}
@@ -533,18 +537,24 @@ export function CopilotCard(props: CopilotCardProps) {
 									}
 									class="w-full px-2 py-1 text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
 								>
-									<option value="individual">Individual</option>
-									<option value="business">Business</option>
-									<option value="enterprise">Enterprise</option>
+									<option value="individual">
+										{t("copilot.accountTypes.individual")}
+									</option>
+									<option value="business">
+										{t("copilot.accountTypes.business")}
+									</option>
+									<option value="enterprise">
+										{t("copilot.accountTypes.enterprise")}
+									</option>
 								</select>
 							</div>
 							<div class="flex items-center justify-between">
 								<div>
 									<label class="block text-xs font-medium text-gray-700 dark:text-gray-300">
-										Rate Limit Wait
+										{t("copilot.rateLimitWait")}
 									</label>
 									<p class="text-xs text-gray-500 dark:text-gray-400">
-										Wait instead of error on rate limit
+										{t("copilot.rateLimitWaitDescription")}
 									</p>
 								</div>
 								<Switch
@@ -565,8 +575,7 @@ export function CopilotCard(props: CopilotCardProps) {
 			{/* Collapsed state when disabled */}
 			<Show when={!props.config.enabled}>
 				<div class="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
-					Enable to access GPT-4, Claude, and other models through your GitHub
-					Copilot subscription
+					{t("copilot.enableHint")}
 				</div>
 			</Show>
 		</div>

@@ -2,6 +2,7 @@ import { Match, onCleanup, onMount, Switch } from "solid-js";
 import { CommandPalette } from "./components/CommandPalette";
 import { Sidebar } from "./components/Sidebar";
 import { ToastContainer } from "./components/ui";
+import { useI18n } from "./i18n";
 import {
 	AnalyticsPage,
 	ApiKeysPage,
@@ -15,6 +16,7 @@ import { themeStore } from "./stores/theme";
 
 function App() {
 	const { currentPage, isInitialized, initialize, setCurrentPage } = appStore;
+	const { t } = useI18n();
 
 	onMount(() => {
 		initialize();
@@ -52,7 +54,7 @@ function App() {
 								class="w-16 h-16 rounded-2xl object-contain"
 							/>
 						</div>
-						<p class="text-gray-500 dark:text-gray-400">Loading ProxyPal...</p>
+						<p class="text-gray-500 dark:text-gray-400">{t("app.loading")}</p>
 					</div>
 				</div>
 			) : (

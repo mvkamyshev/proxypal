@@ -2,6 +2,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { createEffect, createSignal, For, Show } from "solid-js";
 import { EmptyState } from "../components/EmptyState";
 import { Button } from "../components/ui";
+import { useI18n } from "../i18n";
 import {
 	type AuthFile,
 	deleteAllAuthFiles,
@@ -41,6 +42,7 @@ const providerIcons: Record<string, string> = {
 };
 
 export function AuthFilesPage() {
+	const { t } = useI18n();
 	const { setCurrentPage, proxyStatus } = appStore;
 	const [files, setFiles] = createSignal<AuthFile[]>([]);
 	const [loading, setLoading] = createSignal(false);
@@ -66,7 +68,10 @@ export function AuthFilesPage() {
 			const result = await getAuthFiles();
 			setFiles(result);
 		} catch (err) {
-			toastStore.error(`Failed to load auth files: ${err}`);
+			toastStore.error(
+				t("authFiles.toasts.failedToLoadAuthFiles"),
+				String(err),
+			);
 		} finally {
 			setLoading(false);
 		}
@@ -93,11 +98,11 @@ export function AuthFilesPage() {
 				else if (filename.includes("antigravity")) provider = "antigravity";
 
 				await uploadAuthFile(selected, provider);
-				toastStore.success("Auth file uploaded successfully");
+				toastStore.success(t("authFiles.toasts.authFileUploadedSuccessfully"));
 				loadFiles();
 			}
 		} catch (err) {
-			toastStore.error(`Failed to upload file: ${err}`);
+			toastStore.error(t("authFiles.toasts.failedToUploadFile"), String(err));
 		}
 	};
 
@@ -112,13 +117,19 @@ export function AuthFilesPage() {
 				const result = await testKiroConnection();
 				if (result.success) {
 					toastStore.success(
-						`Kiro connection OK${result.latencyMs != null ? ` (${result.latencyMs}ms)` : ""}`,
+						t("authFiles.toasts.kiroConnectionOk", {
+							latency:
+								result.latencyMs != null ? ` (${result.latencyMs}ms)` : "",
+						}),
 					);
 				} else {
-					toastStore.error(`Kiro test failed: ${result.message}`);
+					toastStore.error(
+						t("authFiles.toasts.kiroTestFailed"),
+						result.message,
+					);
 				}
 			} catch (err: unknown) {
-				toastStore.error(`Test failed: ${err}`);
+				toastStore.error(t("authFiles.toasts.testFailed"), String(err));
 			} finally {
 				setTestingProvider(null);
 			}
@@ -139,7 +150,9 @@ export function AuthFilesPage() {
 
 		if (!modelId) {
 			toastStore.error(
-				`Unknown provider: ${file.provider}. Cannot determine test model.`,
+				t("authFiles.toasts.unknownProviderCannotDetermineTestModel", {
+					provider: file.provider,
+				}),
 			);
 			return;
 		}
@@ -150,13 +163,19 @@ export function AuthFilesPage() {
 			const result = await testProviderConnection(modelId);
 			if (result.success) {
 				toastStore.success(
-					`Connection to ${file.provider} successful! (${result.latencyMs}ms)`,
+					t("authFiles.toasts.connectionToProviderSuccessful", {
+						provider: file.provider,
+						latency: result.latencyMs ?? "-",
+					}),
 				);
 			} else {
-				toastStore.error(`Connection failed: ${result.message}`);
+				toastStore.error(
+					t("authFiles.toasts.connectionFailed"),
+					result.message,
+				);
 			}
 		} catch (err: any) {
-			toastStore.error(`Test failed: ${err}`);
+			toastStore.error(t("authFiles.toasts.testFailed"), String(err));
 		} finally {
 			setTestingProvider(null);
 		}
@@ -172,14 +191,14 @@ export function AuthFilesPage() {
 
 		try {
 			await deleteAuthFile(file.id);
-			toastStore.success("Auth file deleted");
+			toastStore.success(t("authFiles.toasts.authFileDeleted"));
 			setFileToDelete(null);
 			// Refresh both file list and global auth status
 			loadFiles();
 			const newAuthStatus = await refreshAuthStatus();
 			appStore.setAuthStatus(newAuthStatus);
 		} catch (err) {
-			toastStore.error(`Failed to delete: ${err}`);
+			toastStore.error(t("authFiles.toasts.failedToDelete"), String(err));
 		}
 	};
 
@@ -210,30 +229,30 @@ export function AuthFilesPage() {
 					return f;
 				}),
 			);
-			toastStore.error(`Failed to toggle file: ${err}`);
+			toastStore.error(t("authFiles.toasts.failedToToggleFile"), String(err));
 		}
 	};
 
 	const handleDownload = async (file: AuthFile) => {
 		try {
 			const path = await downloadAuthFile(file.id, file.name);
-			toastStore.success(`Downloaded to ${path}`);
+			toastStore.success(t("authFiles.toasts.downloadedTo", { path }));
 		} catch (err) {
-			toastStore.error(`Failed to download: ${err}`);
+			toastStore.error(t("authFiles.toasts.failedToDownload"), String(err));
 		}
 	};
 
 	const handleDeleteAll = async () => {
 		try {
 			await deleteAllAuthFiles();
-			toastStore.success("All auth files deleted");
+			toastStore.success(t("authFiles.toasts.allAuthFilesDeleted"));
 			setShowDeleteAllConfirm(false);
 			// Refresh both file list and global auth status
 			loadFiles();
 			const newAuthStatus = await refreshAuthStatus();
 			appStore.setAuthStatus(newAuthStatus);
 		} catch (err) {
-			toastStore.error(`Failed to delete all: ${err}`);
+			toastStore.error(t("authFiles.toasts.failedToDeleteAll"), String(err));
 		}
 	};
 
@@ -287,7 +306,7 @@ export function AuthFilesPage() {
 							</svg>
 						</Button>
 						<h1 class="font-bold text-lg text-gray-900 dark:text-gray-100">
-							Auth Files
+							{t("authFiles.title")}
 						</h1>
 						<Show when={loading()}>
 							<span class="text-xs text-gray-400 ml-2 flex items-center gap-1">
@@ -310,7 +329,7 @@ export function AuthFilesPage() {
 										d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
 									/>
 								</svg>
-								Loading
+								{t("common.loading")}
 							</span>
 						</Show>
 					</div>
@@ -323,7 +342,7 @@ export function AuthFilesPage() {
 								onClick={() => setShowDeleteAllConfirm(true)}
 								class="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
 							>
-								Delete All
+								{t("authFiles.actions.deleteAll")}
 							</Button>
 						</Show>
 						<Button variant="primary" size="sm" onClick={handleUpload}>
@@ -340,7 +359,7 @@ export function AuthFilesPage() {
 									d="M12 4v16m8-8H4"
 								/>
 							</svg>
-							Upload
+							{t("authFiles.actions.upload")}
 						</Button>
 					</div>
 				</div>
@@ -367,8 +386,8 @@ export function AuthFilesPage() {
 									/>
 								</svg>
 							}
-							title="Proxy Not Running"
-							description="Start the proxy server to manage auth files via the Management API."
+							title={t("authFiles.proxyNotRunning")}
+							description={t("authFiles.startProxyDescription")}
 						/>
 					</Show>
 
@@ -384,7 +403,7 @@ export function AuthFilesPage() {
 											: "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800"
 									}`}
 								>
-									All ({files().length})
+									{t("authFiles.filters.all", { count: files().length })}
 								</button>
 								<For each={providers()}>
 									{(provider) => (
@@ -436,10 +455,10 @@ export function AuthFilesPage() {
 										/>
 									</svg>
 								}
-								title="No Auth Files"
-								description="OAuth credentials will appear here after connecting providers, or upload credential files manually."
+								title={t("authFiles.noAuthFiles")}
+								description={t("authFiles.noAuthFilesDescription")}
 								action={{
-									label: "Upload Auth File",
+									label: t("authFiles.actions.uploadAuthFile"),
 									onClick: handleUpload,
 								}}
 							/>
@@ -488,12 +507,12 @@ export function AuthFilesPage() {
 															</span>
 															<Show when={file.status === "error"}>
 																<span class="px-2 py-0.5 rounded text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800">
-																	Error
+																	{t("common.error")}
 																</span>
 															</Show>
 															<Show when={file.disabled}>
 																<span class="px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-600">
-																	Disabled
+																	{t("common.disabled")}
 																</span>
 															</Show>
 														</div>
@@ -585,8 +604,8 @@ export function AuthFilesPage() {
 																	</svg>
 																</Show>
 																{testingProvider() === file.name
-																	? "Testing..."
-																	: "Test Connection"}
+																	? t("authFiles.actions.testing")
+																	: t("authFiles.actions.testConnection")}
 															</button>
 														</div>
 
@@ -600,7 +619,9 @@ export function AuthFilesPage() {
 															<div class="flex items-center gap-4 mt-2 text-xs">
 																<Show when={file.successCount !== undefined}>
 																	<span class="text-green-600 dark:text-green-400">
-																		{file.successCount} success
+																		{t("authFiles.stats.successCount", {
+																			count: file.successCount || 0,
+																		})}
 																	</span>
 																</Show>
 																<Show
@@ -610,7 +631,9 @@ export function AuthFilesPage() {
 																	}
 																>
 																	<span class="text-red-600 dark:text-red-400">
-																		{file.failureCount} failed
+																		{t("authFiles.stats.failedCount", {
+																			count: file.failureCount || 0,
+																		})}
 																	</span>
 																</Show>
 															</div>
@@ -623,7 +646,7 @@ export function AuthFilesPage() {
 													<button
 														onClick={() => handleDownload(file)}
 														class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-														title="Download"
+														title={t("authFiles.actions.download")}
 													>
 														<svg
 															class="w-5 h-5"
@@ -646,7 +669,11 @@ export function AuthFilesPage() {
 																? "text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
 																: "text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20"
 														}`}
-														title={file.disabled ? "Enable" : "Disable"}
+														title={
+															file.disabled
+																? t("authFiles.actions.enable")
+																: t("authFiles.actions.disable")
+														}
 													>
 														<Show when={!file.disabled}>
 															<svg
@@ -688,7 +715,7 @@ export function AuthFilesPage() {
 													<button
 														onClick={() => handleDelete(file)}
 														class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-														title="Delete"
+														title={t("authFiles.actions.delete")}
 													>
 														<svg
 															class="w-5 h-5"
@@ -720,25 +747,26 @@ export function AuthFilesPage() {
 				<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
 					<div class="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full mx-4 border border-gray-200 dark:border-gray-700 shadow-xl">
 						<h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-							Delete All Auth Files?
+							{t("authFiles.modals.deleteAllTitle")}
 						</h3>
 						<p class="text-gray-600 dark:text-gray-400 mb-6">
-							This will delete all {files().length} auth files. You will need to
-							re-authenticate with all providers. This action cannot be undone.
+							{t("authFiles.modals.deleteAllDescription", {
+								count: files().length,
+							})}
 						</p>
 						<div class="flex justify-end gap-3">
 							<Button
 								variant="ghost"
 								onClick={() => setShowDeleteAllConfirm(false)}
 							>
-								Cancel
+								{t("common.cancel")}
 							</Button>
 							<Button
 								variant="primary"
 								onClick={handleDeleteAll}
 								class="bg-red-500 hover:bg-red-600"
 							>
-								Delete All
+								{t("authFiles.actions.deleteAll")}
 							</Button>
 						</div>
 					</div>
@@ -750,25 +778,25 @@ export function AuthFilesPage() {
 				<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
 					<div class="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full mx-4 border border-gray-200 dark:border-gray-700 shadow-xl">
 						<h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-							Delete Auth File?
+							{t("authFiles.modals.deleteSingleTitle")}
 						</h3>
 						<p class="text-gray-600 dark:text-gray-400 mb-6">
-							Delete{" "}
+							{t("authFiles.modals.deletePrefix")}{" "}
 							<span class="font-medium text-gray-900 dark:text-gray-100">
 								{fileToDelete()?.name}
 							</span>
-							? You will need to re-authenticate with this provider.
+							? {t("authFiles.modals.deleteSingleDescription")}
 						</p>
 						<div class="flex justify-end gap-3">
 							<Button variant="ghost" onClick={() => setFileToDelete(null)}>
-								Cancel
+								{t("common.cancel")}
 							</Button>
 							<Button
 								variant="primary"
 								onClick={confirmDelete}
 								class="bg-red-500 hover:bg-red-600"
 							>
-								Delete
+								{t("authFiles.actions.delete")}
 							</Button>
 						</div>
 					</div>

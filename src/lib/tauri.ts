@@ -380,6 +380,7 @@ export interface AppConfig {
 	cloudflareConfigs?: CloudflareConfig[];
 	disableControlPanel?: boolean; // Hide CLIProxyAPI's web management UI
 	sidebarPinned?: boolean;
+	locale?: string;
 }
 
 export async function getConfig(): Promise<AppConfig> {

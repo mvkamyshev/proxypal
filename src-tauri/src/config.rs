@@ -84,6 +84,8 @@ pub struct AppConfig {
     pub ws_auth: bool,
     #[serde(default)]
     pub sidebar_pinned: bool,
+    #[serde(default = "default_locale")]
+    pub locale: String,
     #[serde(default)]
     pub ssh_configs: Vec<SshConfig>,
     #[serde(default)]
@@ -128,6 +130,10 @@ fn default_gemini_thinking_injection() -> bool {
     true
 }
 
+fn default_locale() -> String {
+    "en".to_string()
+}
+
 impl Default for AppConfig {
     fn default() -> Self {
         Self {
@@ -170,6 +176,7 @@ impl Default for AppConfig {
             management_key: "proxypal-mgmt-key".to_string(),
             commercial_mode: false,
             ws_auth: false,
+            locale: "en".to_string(),
             ssh_configs: Vec::new(),
             cloudflare_configs: Vec::new(),
             disable_control_panel: true,

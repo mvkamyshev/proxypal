@@ -9,6 +9,7 @@ import {
 } from "solid-js";
 import { ModelsWidget } from "../components/ModelsWidget";
 import { Button, Switch } from "../components/ui";
+import { LOCALE_LABELS, LOCALE_OPTIONS, useI18n } from "../i18n";
 
 type SettingsTab =
 	| "general"
@@ -157,6 +158,7 @@ const applyAmpGptReasoningLevel = (
 };
 
 export function SettingsPage() {
+	const { t } = useI18n();
 	const {
 		config,
 		setConfig,
@@ -264,8 +266,8 @@ export function SettingsPage() {
 	const handleConfigureAgent = async (agentId: string) => {
 		if (!appStore.proxyStatus().running) {
 			toastStore.warning(
-				"Start the proxy first",
-				"The proxy must be running to configure agents",
+				t("settings.toasts.startProxyFirst"),
+				t("settings.toasts.proxyMustBeRunningToConfigureAgents"),
 			);
 			return;
 		}
@@ -281,11 +283,15 @@ export function SettingsPage() {
 				});
 				const refreshed = await detectCliAgents();
 				setAgents(refreshed);
-				toastStore.success(`${agent?.name || agentId} configured!`);
+				toastStore.success(
+					t("settings.toasts.agentConfigured", {
+						name: agent?.name || agentId,
+					}),
+				);
 			}
 		} catch (error) {
 			console.error("Failed to configure agent:", error);
-			toastStore.error("Configuration failed", String(error));
+			toastStore.error(t("settings.toasts.configurationFailed"), String(error));
 		} finally {
 			setConfiguringAgent(null);
 		}
@@ -297,12 +303,18 @@ export function SettingsPage() {
 
 		try {
 			const profilePath = await appendToShellProfile(result.result.shellConfig);
-			toastStore.success("Added to shell profile", `Updated ${profilePath}`);
+			toastStore.success(
+				t("settings.toasts.addedToShellProfile"),
+				t("settings.toasts.updatedPath", { path: profilePath }),
+			);
 			setConfigResult(null);
 			const refreshed = await detectCliAgents();
 			setAgents(refreshed);
 		} catch (error) {
-			toastStore.error("Failed to update shell profile", String(error));
+			toastStore.error(
+				t("settings.toasts.failedToUpdateShellProfile"),
+				String(error),
+			);
 		}
 	};
 
@@ -458,12 +470,12 @@ export function SettingsPage() {
 			setCloseToTrayState(enabled);
 			toastStore.success(
 				enabled
-					? "Window will minimize to tray when closed"
-					: "Window will quit when closed",
+					? t("settings.toasts.windowWillMinimizeToTray")
+					: t("settings.toasts.windowWillQuit"),
 			);
 		} catch (error) {
 			console.error("Failed to save close to tray setting:", error);
-			toastStore.error(`Failed to save setting: ${error}`);
+			toastStore.error(t("settings.toasts.failedToSaveSetting"), String(error));
 		} finally {
 			setSavingCloseToTray(false);
 		}
@@ -505,10 +517,10 @@ export function SettingsPage() {
 				...prev,
 				[modelType]: modelName || null,
 			}));
-			toastStore.success("Claude Code model updated");
+			toastStore.success(t("settings.toasts.claudeCodeModelUpdated"));
 		} catch (error) {
 			console.error("Failed to save Claude Code setting:", error);
-			toastStore.error(`Failed to save setting: ${error}`);
+			toastStore.error(t("settings.toasts.failedToSaveSetting"), String(error));
 		}
 	};
 
@@ -545,7 +557,7 @@ export function SettingsPage() {
 
 	const handleSaveSsh = async () => {
 		if (!sshHost() || !sshUser()) {
-			toastStore.error("Host and Username are required");
+			toastStore.error(t("settings.toasts.hostAndUsernameRequired"));
 			return;
 		}
 
@@ -568,9 +580,9 @@ export function SettingsPage() {
 
 			// Reset form
 			handleCancelEdit();
-			toastStore.success("Connection saved");
+			toastStore.success(t("settings.toasts.connectionSaved"));
 		} catch (e) {
-			toastStore.error("Failed to save", String(e));
+			toastStore.error(t("settings.toasts.failedToSave"), String(e));
 		} finally {
 			setSshAdding(false);
 		}
@@ -600,12 +612,12 @@ export function SettingsPage() {
 	};
 
 	const handleDeleteSsh = async (id: string) => {
-		if (!confirm("Delete this connection?")) return;
+		if (!confirm(t("settings.confirm.deleteConnection"))) return;
 		try {
 			const updated = await deleteSshConfig(id);
 			setConfig((prev) => ({ ...prev, sshConfigs: updated }));
 		} catch (e) {
-			toastStore.error("Failed to delete", String(e));
+			toastStore.error(t("settings.toasts.failedToDelete"), String(e));
 		}
 	};
 
@@ -619,14 +631,14 @@ export function SettingsPage() {
 			);
 			setConfig((prev) => ({ ...prev, sshConfigs: updated }));
 		} catch (e) {
-			toastStore.error("Failed to toggle", String(e));
+			toastStore.error(t("settings.toasts.failedToToggle"), String(e));
 		}
 	};
 
 	// Cloudflare Handlers
 	const handleSaveCf = async () => {
 		if (!cfName() || !cfToken()) {
-			toastStore.error("Please fill in name and tunnel token");
+			toastStore.error(t("settings.toasts.nameAndTunnelTokenRequired"));
 			return;
 		}
 		try {
@@ -644,9 +656,9 @@ export function SettingsPage() {
 			setCfToken("");
 			setCfLocalPort(8317);
 			setCfAdding(false);
-			toastStore.success("Cloudflare tunnel saved");
+			toastStore.success(t("settings.toasts.cloudflareTunnelSaved"));
 		} catch (e) {
-			toastStore.error("Failed to save", String(e));
+			toastStore.error(t("settings.toasts.failedToSave"), String(e));
 		}
 	};
 
@@ -654,9 +666,9 @@ export function SettingsPage() {
 		try {
 			const updated = await deleteCloudflareConfig(id);
 			setConfig((prev) => ({ ...prev, cloudflareConfigs: updated }));
-			toastStore.success("Tunnel deleted");
+			toastStore.success(t("settings.toasts.tunnelDeleted"));
 		} catch (e) {
-			toastStore.error("Failed to delete", String(e));
+			toastStore.error(t("settings.toasts.failedToDelete"), String(e));
 		}
 	};
 
@@ -669,7 +681,7 @@ export function SettingsPage() {
 			);
 			setConfig((prev) => ({ ...prev, cloudflareConfigs: updated }));
 		} catch (e) {
-			toastStore.error("Failed to toggle", String(e));
+			toastStore.error(t("settings.toasts.failedToToggle"), String(e));
 		}
 	};
 
@@ -689,13 +701,17 @@ export function SettingsPage() {
 			const info = await checkForUpdates();
 			setUpdateInfo(info);
 			if (info.available) {
-				toastStore.success(`Update available: v${info.version}`);
+				toastStore.success(
+					t("settings.toasts.updateAvailable", {
+						version: info.version || "",
+					}),
+				);
 			} else {
-				toastStore.success("You're on the latest version");
+				toastStore.success(t("settings.toasts.latestVersion"));
 			}
 		} catch (error) {
 			console.error("Update check failed:", error);
-			toastStore.error(`Update check failed: ${error}`);
+			toastStore.error(t("settings.toasts.updateCheckFailed"), String(error));
 		} finally {
 			setCheckingForUpdates(false);
 		}
@@ -712,7 +728,7 @@ export function SettingsPage() {
 			// App will restart, so this won't be reached
 		} catch (error) {
 			console.error("Update installation failed:", error);
-			toastStore.error(`Update failed: ${error}`);
+			toastStore.error(t("settings.toasts.updateFailed"), String(error));
 			setInstallingUpdate(false);
 			setUpdateProgress(null);
 		}
@@ -726,7 +742,7 @@ export function SettingsPage() {
 			setCopilotDetection(result);
 		} catch (error) {
 			console.error("Copilot detection failed:", error);
-			toastStore.error(`Detection failed: ${error}`);
+			toastStore.error(t("settings.toasts.detectionFailed"), String(error));
 		} finally {
 			setDetectingCopilot(false);
 		}
@@ -822,9 +838,12 @@ export function SettingsPage() {
 		try {
 			await setMaxRetryInterval(value);
 			setMaxRetryIntervalState(value);
-			toastStore.success("Max retry interval updated");
+			toastStore.success(t("settings.toasts.maxRetryIntervalUpdated"));
 		} catch (error) {
-			toastStore.error("Failed to update max retry interval", String(error));
+			toastStore.error(
+				t("settings.toasts.failedToUpdateMaxRetryInterval"),
+				String(error),
+			);
 		} finally {
 			setSavingMaxRetryInterval(false);
 		}
@@ -836,9 +855,12 @@ export function SettingsPage() {
 		try {
 			await setLogSize(value);
 			setLogSizeState(value);
-			toastStore.success("Log buffer size updated");
+			toastStore.success(t("settings.toasts.logBufferSizeUpdated"));
 		} catch (error) {
-			toastStore.error("Failed to update log size", String(error));
+			toastStore.error(
+				t("settings.toasts.failedToUpdateLogSize"),
+				String(error),
+			);
 		} finally {
 			setSavingLogSize(false);
 		}
@@ -851,10 +873,17 @@ export function SettingsPage() {
 			await setWebsocketAuth(value);
 			setWebsocketAuthState(value);
 			toastStore.success(
-				`WebSocket authentication ${value ? "enabled" : "disabled"}`,
+				t("settings.toasts.websocketAuthentication", {
+					status: value
+						? t("settings.toasts.enabled")
+						: t("settings.toasts.disabled"),
+				}),
 			);
 		} catch (error) {
-			toastStore.error("Failed to update WebSocket auth", String(error));
+			toastStore.error(
+				t("settings.toasts.failedToUpdateWebsocketAuth"),
+				String(error),
+			);
 		} finally {
 			setSavingWebsocketAuth(false);
 		}
@@ -867,14 +896,18 @@ export function SettingsPage() {
 			await setForceModelMappings(value);
 			setForceModelMappingsState(value);
 			toastStore.success(
-				`Model mapping priority ${value ? "enabled" : "disabled"}`,
+				t("settings.toasts.modelMappingPriority", {
+					status: value
+						? t("settings.toasts.enabled")
+						: t("settings.toasts.disabled"),
+				}),
 				value
-					? "Model mappings now take precedence over local API keys"
-					: "Local API keys now take precedence over model mappings",
+					? t("settings.toasts.modelMappingsTakePrecedence")
+					: t("settings.toasts.localApiKeysTakePrecedence"),
 			);
 		} catch (error) {
 			toastStore.error(
-				"Failed to update model mapping priority",
+				t("settings.toasts.failedToUpdateModelMappingPriority"),
 				String(error),
 			);
 		} finally {
@@ -888,7 +921,7 @@ export function SettingsPage() {
 		const model = newExcludedModel().trim();
 
 		if (!provider || !model) {
-			toastStore.error("Provider and model are required");
+			toastStore.error(t("settings.toasts.providerAndModelRequired"));
 			return;
 		}
 
@@ -897,7 +930,7 @@ export function SettingsPage() {
 			const current = oauthExcludedModels();
 			const existing = current[provider] || [];
 			if (existing.includes(model)) {
-				toastStore.error("Model already excluded for this provider");
+				toastStore.error(t("settings.toasts.modelAlreadyExcluded"));
 				return;
 			}
 
@@ -905,9 +938,17 @@ export function SettingsPage() {
 			await setOAuthExcludedModels(provider, updated);
 			setOAuthExcludedModelsState({ ...current, [provider]: updated });
 			setNewExcludedModel("");
-			toastStore.success(`Model "${model}" excluded for ${provider}`);
+			toastStore.success(
+				t("settings.toasts.modelExcludedForProvider", {
+					model,
+					provider,
+				}),
+			);
 		} catch (error) {
-			toastStore.error("Failed to add excluded model", String(error));
+			toastStore.error(
+				t("settings.toasts.failedToAddExcludedModel"),
+				String(error),
+			);
 		} finally {
 			setSavingExcludedModels(false);
 		}
@@ -930,9 +971,17 @@ export function SettingsPage() {
 				await setOAuthExcludedModels(provider, updated);
 				setOAuthExcludedModelsState({ ...current, [provider]: updated });
 			}
-			toastStore.success(`Model "${model}" removed from ${provider}`);
+			toastStore.success(
+				t("settings.toasts.modelRemovedFromProvider", {
+					model,
+					provider,
+				}),
+			);
 		} catch (error) {
-			toastStore.error("Failed to remove excluded model", String(error));
+			toastStore.error(
+				t("settings.toasts.failedToRemoveExcludedModel"),
+				String(error),
+			);
 		} finally {
 			setSavingExcludedModels(false);
 		}
@@ -941,9 +990,7 @@ export function SettingsPage() {
 	// Raw YAML Config handlers
 	const loadYamlConfig = async () => {
 		if (!appStore.proxyStatus().running) {
-			setYamlContent(
-				"# Proxy is not running. Start the proxy to load configuration.",
-			);
+			setYamlContent(t("settings.yaml.proxyNotRunning"));
 			return;
 		}
 		setLoadingYaml(true);
@@ -951,7 +998,10 @@ export function SettingsPage() {
 			const yaml = await getConfigYaml();
 			setYamlContent(yaml);
 		} catch (error) {
-			toastStore.error("Failed to load config YAML", String(error));
+			toastStore.error(
+				t("settings.toasts.failedToLoadConfigYaml"),
+				String(error),
+			);
 		} finally {
 			setLoadingYaml(false);
 		}
@@ -961,11 +1011,12 @@ export function SettingsPage() {
 		setSavingYaml(true);
 		try {
 			await setConfigYaml(yamlContent());
-			toastStore.success(
-				"Config YAML saved. Some changes may require a restart.",
-			);
+			toastStore.success(t("settings.toasts.configYamlSaved"));
 		} catch (error) {
-			toastStore.error("Failed to save config YAML", String(error));
+			toastStore.error(
+				t("settings.toasts.failedToSaveConfigYaml"),
+				String(error),
+			);
 		} finally {
 			setSavingYaml(false);
 		}
@@ -984,7 +1035,7 @@ export function SettingsPage() {
 		const apiKey = providerApiKey().trim();
 
 		if (!baseUrl || !apiKey) {
-			toastStore.error("Base URL and API key are required to test connection");
+			toastStore.error(t("settings.toasts.baseUrlAndApiKeyRequiredForTest"));
 			return;
 		}
 
@@ -997,9 +1048,11 @@ export function SettingsPage() {
 
 			if (result.success) {
 				const modelsInfo = result.modelsFound
-					? ` Found ${result.modelsFound} models.`
+					? t("settings.toasts.foundModels", { count: result.modelsFound })
 					: "";
-				toastStore.success(`Connection successful!${modelsInfo}`);
+				toastStore.success(
+					`${t("settings.toasts.connectionSuccessful")}${modelsInfo}`,
+				);
 			} else {
 				toastStore.error(result.message);
 			}
@@ -1009,7 +1062,7 @@ export function SettingsPage() {
 				success: false,
 				message: errorMsg,
 			});
-			toastStore.error("Connection test failed", errorMsg);
+			toastStore.error(t("settings.toasts.connectionTestFailed"), errorMsg);
 		} finally {
 			setTestingProvider(false);
 		}
@@ -1100,10 +1153,10 @@ export function SettingsPage() {
 				await new Promise((resolve) => setTimeout(resolve, 300));
 				await startProxy();
 			}
-			toastStore.success("Model mapping updated");
+			toastStore.success(t("settings.toasts.modelMappingUpdated"));
 		} catch (error) {
 			console.error("Failed to save config:", error);
-			toastStore.error("Failed to save settings", String(error));
+			toastStore.error(t("settings.toasts.settingsSaveFailed"), String(error));
 		} finally {
 			setSaving(false);
 		}
@@ -1122,14 +1175,14 @@ export function SettingsPage() {
 		const to = newMappingTo().trim();
 
 		if (!from || !to) {
-			toastStore.error("Both 'from' and 'to' models are required");
+			toastStore.error(t("settings.toasts.fromAndToRequired"));
 			return;
 		}
 
 		// Check for duplicates
 		const existingMappings = config().ampModelMappings || [];
 		if (existingMappings.some((m) => m.name === from)) {
-			toastStore.error(`A mapping for '${from}' already exists`);
+			toastStore.error(t("settings.toasts.mappingAlreadyExists", { from }));
 			return;
 		}
 
@@ -1146,12 +1199,12 @@ export function SettingsPage() {
 		setSaving(true);
 		try {
 			await saveConfig(newConfig);
-			toastStore.success("Custom mapping added");
+			toastStore.success(t("settings.toasts.customMappingAdded"));
 			setNewMappingFrom("");
 			setNewMappingTo("");
 		} catch (error) {
 			console.error("Failed to save config:", error);
-			toastStore.error("Failed to save settings", String(error));
+			toastStore.error(t("settings.toasts.settingsSaveFailed"), String(error));
 		} finally {
 			setSaving(false);
 		}
@@ -1168,10 +1221,10 @@ export function SettingsPage() {
 		setSaving(true);
 		try {
 			await saveConfig(newConfig);
-			toastStore.success("Custom mapping removed");
+			toastStore.success(t("settings.toasts.customMappingRemoved"));
 		} catch (error) {
 			console.error("Failed to save config:", error);
-			toastStore.error("Failed to save settings", String(error));
+			toastStore.error(t("settings.toasts.settingsSaveFailed"), String(error));
 		} finally {
 			setSaving(false);
 		}
@@ -1186,11 +1239,19 @@ export function SettingsPage() {
 				customBudget: thinkingBudgetCustom(),
 			});
 			toastStore.success(
-				`Thinking budget updated to ${getThinkingBudgetTokens({ mode: thinkingBudgetMode(), customBudget: thinkingBudgetCustom() })} tokens`,
+				t("settings.toasts.thinkingBudgetUpdated", {
+					tokens: getThinkingBudgetTokens({
+						mode: thinkingBudgetMode(),
+						customBudget: thinkingBudgetCustom(),
+					}),
+				}),
 			);
 		} catch (error) {
 			console.error("Failed to save thinking budget:", error);
-			toastStore.error("Failed to save thinking budget", String(error));
+			toastStore.error(
+				t("settings.toasts.failedToSaveThinkingBudget"),
+				String(error),
+			);
 		} finally {
 			setSavingThinkingBudget(false);
 		}
@@ -1204,11 +1265,15 @@ export function SettingsPage() {
 			await saveConfig({ ...currentConfig, geminiThinkingInjection: enabled });
 			setGeminiThinkingInjection(enabled);
 			toastStore.success(
-				`Gemini thinking config injection ${enabled ? "enabled" : "disabled"}`,
+				t("settings.toasts.geminiThinkingConfigInjection", {
+					status: enabled
+						? t("settings.toasts.enabled")
+						: t("settings.toasts.disabled"),
+				}),
 			);
 		} catch (error) {
 			console.error("Failed to save Gemini thinking injection:", error);
-			toastStore.error("Failed to save setting", String(error));
+			toastStore.error(t("settings.toasts.failedToSaveSetting"), String(error));
 		} finally {
 			setSavingGeminiThinking(false);
 		}
@@ -1222,11 +1287,16 @@ export function SettingsPage() {
 				level: reasoningEffortLevel(),
 			});
 			toastStore.success(
-				`Reasoning effort updated to "${reasoningEffortLevel()}"`,
+				t("settings.toasts.reasoningEffortUpdated", {
+					level: reasoningEffortLevel(),
+				}),
 			);
 		} catch (error) {
 			console.error("Failed to save reasoning effort:", error);
-			toastStore.error("Failed to save reasoning effort", String(error));
+			toastStore.error(
+				t("settings.toasts.failedToSaveReasoningEffort"),
+				String(error),
+			);
 		} finally {
 			setSavingReasoningEffort(false);
 		}
@@ -1302,7 +1372,8 @@ export function SettingsPage() {
 				setConfig({ ...config(), ampModelMappings: revertedMappings });
 			}
 			toastStore.error(
-				`Failed to update reasoning level: ${error instanceof Error ? error.message : String(error)}`,
+				t("settings.toasts.failedToUpdateReasoningLevel"),
+				error instanceof Error ? error.message : String(error),
 			);
 			return;
 		} finally {
@@ -1321,7 +1392,8 @@ export function SettingsPage() {
 				await startProxy();
 			} catch (error) {
 				toastStore.error(
-					`Reasoning level saved but proxy restart failed: ${error instanceof Error ? error.message : String(error)}`,
+					t("settings.toasts.reasoningLevelSavedButProxyRestartFailed"),
+					error instanceof Error ? error.message : String(error),
 				);
 			}
 		}
@@ -1353,10 +1425,10 @@ export function SettingsPage() {
 				await new Promise((resolve) => setTimeout(resolve, 300));
 				await startProxy();
 			}
-			toastStore.success("Mapping updated");
+			toastStore.success(t("settings.toasts.mappingUpdated"));
 		} catch (error) {
 			console.error("Failed to save config:", error);
-			toastStore.error("Failed to save settings", String(error));
+			toastStore.error(t("settings.toasts.settingsSaveFailed"), String(error));
 		} finally {
 			setSaving(false);
 		}
@@ -1461,7 +1533,10 @@ export function SettingsPage() {
 			],
 			kiro: [
 				// Kiro models - Amazon's AI coding assistant
-				{ value: "kiro-auto", label: "kiro-auto (recommended)" },
+				{
+					value: "kiro-auto",
+					label: `kiro-auto (${t("common.recommended")})`,
+				},
 				{ value: "kiro-claude-sonnet-4", label: "kiro-claude-sonnet-4" },
 				{ value: "kiro-claude-sonnet-4-5", label: "kiro-claude-sonnet-4-5" },
 				{ value: "kiro-claude-opus-4-5", label: "kiro-claude-opus-4-5" },
@@ -1550,18 +1625,20 @@ export function SettingsPage() {
 
 			// If management key changed and proxy is running, restart proxy to apply new key
 			if (key === "managementKey" && appStore.proxyStatus().running) {
-				toastStore.info("Restarting proxy to apply new management key...");
+				toastStore.info(t("settings.toasts.restartingProxyForManagementKey"));
 				await stopProxy();
 				// Small delay to ensure config file is fully written and flushed
 				await new Promise((resolve) => setTimeout(resolve, 500));
 				await startProxy();
-				toastStore.success("Proxy restarted with new management key");
+				toastStore.success(
+					t("settings.toasts.proxyRestartedWithManagementKey"),
+				);
 			} else {
-				toastStore.success("Settings saved");
+				toastStore.success(t("settings.toasts.settingsSaved"));
 			}
 		} catch (error) {
 			console.error("Failed to save config:", error);
-			toastStore.error("Failed to save settings", String(error));
+			toastStore.error(t("settings.toasts.settingsSaveFailed"), String(error));
 		} finally {
 			setSaving(false);
 		}
@@ -1584,7 +1661,7 @@ export function SettingsPage() {
 		const name = newModelName().trim();
 		const alias = newModelAlias().trim();
 		if (!name) {
-			toastStore.error("Model name is required");
+			toastStore.error(t("settings.toasts.modelNameRequired"));
 			return;
 		}
 		setProviderModels([...providerModels(), { name, alias }]);
@@ -1602,7 +1679,7 @@ export function SettingsPage() {
 		const apiKey = providerApiKey().trim();
 
 		if (!name || !baseUrl || !apiKey) {
-			toastStore.error("Provider name, base URL, and API key are required");
+			toastStore.error(t("settings.toasts.providerFieldsRequired"));
 			return;
 		}
 
@@ -1635,11 +1712,15 @@ export function SettingsPage() {
 		setSaving(true);
 		try {
 			await saveConfig(newConfig);
-			toastStore.success(editId ? "Provider updated" : "Provider added");
+			toastStore.success(
+				editId
+					? t("settings.toasts.providerUpdated")
+					: t("settings.toasts.providerAdded"),
+			);
 			closeProviderModal();
 		} catch (error) {
 			console.error("Failed to save config:", error);
-			toastStore.error("Failed to save settings", String(error));
+			toastStore.error(t("settings.toasts.settingsSaveFailed"), String(error));
 		} finally {
 			setSaving(false);
 		}
@@ -1655,10 +1736,13 @@ export function SettingsPage() {
 		setSaving(true);
 		try {
 			await saveConfig(newConfig);
-			toastStore.success("Provider removed");
+			toastStore.success(t("settings.toasts.providerRemoved"));
 		} catch (error) {
 			console.error("Failed to save config:", error);
-			toastStore.error("Failed to remove provider", String(error));
+			toastStore.error(
+				t("settings.toasts.providerRemoveFailed"),
+				String(error),
+			);
 		} finally {
 			setSaving(false);
 		}
@@ -1671,7 +1755,7 @@ export function SettingsPage() {
 				<div class="flex items-center justify-between gap-2 sm:gap-3">
 					<div class="flex items-center gap-2 sm:gap-3">
 						<h1 class="font-bold text-lg text-gray-900 dark:text-gray-100">
-							Settings
+							{t("settings.title")}
 						</h1>
 						{saving() && (
 							<span class="text-xs text-gray-400 ml-2 flex items-center gap-1">
@@ -1694,7 +1778,7 @@ export function SettingsPage() {
 										d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
 									/>
 								</svg>
-								Saving
+								{t("common.saving")}
 							</span>
 						)}
 					</div>
@@ -1702,12 +1786,27 @@ export function SettingsPage() {
 					<div class="flex gap-1">
 						<For
 							each={[
-								{ id: "general" as SettingsTab, label: "General" },
-								{ id: "providers" as SettingsTab, label: "Providers" },
-								{ id: "models" as SettingsTab, label: "Models" },
-								{ id: "ssh" as SettingsTab, label: "SSH API" },
-								{ id: "cloudflare" as SettingsTab, label: "Cloudflare" },
-								{ id: "advanced" as SettingsTab, label: "Advanced" },
+								{
+									id: "general" as SettingsTab,
+									label: t("settings.tabs.general"),
+								},
+								{
+									id: "providers" as SettingsTab,
+									label: t("settings.tabs.providers"),
+								},
+								{
+									id: "models" as SettingsTab,
+									label: t("settings.tabs.models"),
+								},
+								{ id: "ssh" as SettingsTab, label: t("settings.tabs.ssh") },
+								{
+									id: "cloudflare" as SettingsTab,
+									label: t("settings.tabs.cloudflare"),
+								},
+								{
+									id: "advanced" as SettingsTab,
+									label: t("settings.tabs.advanced"),
+								},
 							]}
 						>
 							{(tab) => (
@@ -1739,13 +1838,13 @@ export function SettingsPage() {
 						classList={{ hidden: activeTab() !== "general" }}
 					>
 						<h2 class="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
-							General
+							{t("settings.general")}
 						</h2>
 
 						<div class="space-y-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
 							<Switch
-								label="Launch at login"
-								description="Start ProxyPal automatically when you log in"
+								label={t("settings.launchAtLogin.label")}
+								description={t("settings.launchAtLogin.description")}
 								checked={config().launchAtLogin}
 								onChange={(checked) =>
 									handleConfigChange("launchAtLogin", checked)
@@ -1755,8 +1854,8 @@ export function SettingsPage() {
 							<div class="border-t border-gray-200 dark:border-gray-700" />
 
 							<Switch
-								label="Auto-start proxy"
-								description="Start the proxy server when ProxyPal launches"
+								label={t("settings.autoStartProxy.label")}
+								description={t("settings.autoStartProxy.description")}
 								checked={config().autoStart}
 								onChange={(checked) => handleConfigChange("autoStart", checked)}
 							/>
@@ -1764,12 +1863,36 @@ export function SettingsPage() {
 							<div class="border-t border-gray-200 dark:border-gray-700" />
 
 							<Switch
-								label="Close to tray"
-								description="Minimize to system tray instead of quitting when closing the window"
+								label={t("settings.closeToTray.label")}
+								description={t("settings.closeToTray.description")}
 								checked={closeToTray()}
 								onChange={handleCloseToTrayChange}
 								disabled={savingCloseToTray()}
 							/>
+
+							<div class="border-t border-gray-200 dark:border-gray-700" />
+
+							<label class="block">
+								<span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+									{t("settings.language.label")}
+								</span>
+								<p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+									{t("settings.language.description")}
+								</p>
+								<select
+									value={config().locale || "en"}
+									onChange={(e) =>
+										handleConfigChange("locale", e.currentTarget.value)
+									}
+									class="mt-2 block w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-smooth"
+								>
+									<For each={LOCALE_OPTIONS}>
+										{(locale) => (
+											<option value={locale}>{LOCALE_LABELS[locale]}</option>
+										)}
+									</For>
+								</select>
+							</label>
 						</div>
 					</div>
 
@@ -2072,7 +2195,7 @@ export function SettingsPage() {
 
 							<label class="block">
 								<span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-									Request Retry Count
+									{t("settings.network.requestRetry.label")}
 								</span>
 								<input
 									type="number"
@@ -2091,8 +2214,7 @@ export function SettingsPage() {
 									max="10"
 								/>
 								<p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-									Number of retries on 403, 408, 500, 502, 503, 504 errors
-									(0-10)
+									{t("settings.network.requestRetry.description")}
 								</p>
 							</label>
 
@@ -2100,7 +2222,7 @@ export function SettingsPage() {
 
 							<label class="block">
 								<span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-									Routing Strategy
+									{t("settings.network.routingStrategy.label")}
 								</span>
 								<select
 									value={config().routingStrategy}
@@ -2110,15 +2232,17 @@ export function SettingsPage() {
 									class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-smooth [&>option]:bg-white [&>option]:dark:bg-gray-900 [&>option]:text-gray-900 [&>option]:dark:text-gray-100"
 								>
 									<option value="round-robin">
-										Round Robin (even distribution)
+										{t("settings.network.routingStrategy.roundRobin")}
 									</option>
 									<option value="fill-first">
-										Fill First (use first account until limit)
+										{t("settings.network.routingStrategy.fillFirst")}
 									</option>
-									<option value="sequential">Sequential (ordered)</option>
+									<option value="sequential">
+										{t("settings.network.routingStrategy.sequential")}
+									</option>
 								</select>
 								<p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-									How auth accounts are selected for requests
+									{t("settings.network.routingStrategy.description")}
 								</p>
 							</label>
 
@@ -2127,7 +2251,7 @@ export function SettingsPage() {
 
 								<label class="block">
 									<span class="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
-										Max Retry Interval (seconds)
+										{t("settings.network.maxRetryInterval.label")}
 										<Show when={savingMaxRetryInterval()}>
 											<svg
 												class="w-4 h-4 animate-spin text-brand-500"
@@ -2165,14 +2289,13 @@ export function SettingsPage() {
 										min="0"
 									/>
 									<p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-										Maximum wait time between retries in seconds (0 = no limit).
-										Updates live without restart.
+										{t("settings.network.maxRetryInterval.description")}
 									</p>
 								</label>
 
 								<label class="block">
 									<span class="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
-										Log Buffer Size
+										{t("settings.network.logBufferSize.label")}
 										<Show when={savingLogSize()}>
 											<svg
 												class="w-4 h-4 animate-spin text-brand-500"
@@ -2210,8 +2333,7 @@ export function SettingsPage() {
 										min="100"
 									/>
 									<p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-										Number of log entries to retain in memory. Higher values use
-										more memory but preserve older logs.
+										{t("settings.network.logBufferSize.description")}
 									</p>
 								</label>
 							</Show>
@@ -2224,21 +2346,18 @@ export function SettingsPage() {
 						classList={{ hidden: activeTab() !== "general" }}
 					>
 						<h2 class="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
-							Thinking Budget (Antigravity Claude Models)
+							{t("settings.thinkingBudget.title")}
 						</h2>
 
 						<div class="space-y-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
 							<p class="text-xs text-gray-500 dark:text-gray-400">
-								Configure the thinking/reasoning token budget for Antigravity
-								Claude models (claude-sonnet-4-5-thinking,
-								claude-opus-4-5-thinking). This applies to both OpenCode and
-								AmpCode CLI agents.
+								{t("settings.thinkingBudget.description")}
 							</p>
 
 							<div class="space-y-3">
 								<label class="block">
 									<span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-										Budget Level
+										{t("settings.thinkingBudget.budgetLevel")}
 									</span>
 									<select
 										value={thinkingBudgetMode()}
@@ -2249,17 +2368,21 @@ export function SettingsPage() {
 										}
 										class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-smooth [&>option]:bg-white [&>option]:dark:bg-gray-900 [&>option]:text-gray-900 [&>option]:dark:text-gray-100"
 									>
-										<option value="low">Low (2,048 tokens)</option>
-										<option value="medium">Medium (8,192 tokens)</option>
-										<option value="high">High (32,768 tokens)</option>
-										<option value="custom">Custom</option>
+										<option value="low">{t("settings.level.low2048")}</option>
+										<option value="medium">
+											{t("settings.level.medium8192")}
+										</option>
+										<option value="high">
+											{t("settings.level.high32768")}
+										</option>
+										<option value="custom">{t("settings.level.custom")}</option>
 									</select>
 								</label>
 
 								<Show when={thinkingBudgetMode() === "custom"}>
 									<label class="block">
 										<span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-											Custom Token Budget
+											{t("settings.thinkingBudget.customTokenBudget")}
 										</span>
 										<input
 											type="number"
@@ -2280,20 +2403,20 @@ export function SettingsPage() {
 											max="200000"
 										/>
 										<p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-											Range: 1,024 - 200,000 tokens
+											{t("settings.thinkingBudget.customRange")}
 										</p>
 									</label>
 								</Show>
 
 								<div class="flex items-center justify-between pt-2">
 									<span class="text-sm text-gray-600 dark:text-gray-400">
-										Current:{" "}
+										{t("settings.thinkingBudget.current")}:{" "}
 										<span class="font-medium text-brand-600 dark:text-brand-400">
 											{getThinkingBudgetTokens({
 												mode: thinkingBudgetMode(),
 												customBudget: thinkingBudgetCustom(),
 											}).toLocaleString()}{" "}
-											tokens
+											{t("settings.thinkingBudget.tokens")}
 										</span>
 									</span>
 									<Button
@@ -2302,7 +2425,9 @@ export function SettingsPage() {
 										onClick={saveThinkingBudget}
 										disabled={savingThinkingBudget()}
 									>
-										{savingThinkingBudget() ? "Saving..." : "Apply"}
+										{savingThinkingBudget()
+											? t("common.saving")
+											: t("settings.thinkingBudget.apply")}
 									</Button>
 								</div>
 
@@ -2310,12 +2435,10 @@ export function SettingsPage() {
 								<div class="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
 									<div class="flex-1">
 										<span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-											Gemini Thinking Config Injection
+											{t("settings.thinkingBudget.geminiInjection.label")}
 										</span>
 										<p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-											When enabled, ProxyPal injects thinking config for Gemini
-											3 models. Disable if you want to control thinking_config
-											in your requests.
+											{t("settings.thinkingBudget.geminiInjection.description")}
 										</p>
 									</div>
 									<Switch
@@ -2334,25 +2457,22 @@ export function SettingsPage() {
 						classList={{ hidden: activeTab() !== "general" }}
 					>
 						<h2 class="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
-							Reasoning Effort (GPT/Codex Models)
+							{t("settings.reasoning.title")}
 						</h2>
 
 						<div class="space-y-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
 							<p class="text-xs text-gray-500 dark:text-gray-400">
-								Configure default reasoning effort for GPT-5.x models. This
-								setting is applied when configuring CLI agents (OpenCode,
-								Factory Droid, etc.) and can be overridden per-request using
-								model suffix like{" "}
+								{t("settings.reasoning.descriptionPrefix")}{" "}
 								<code class="bg-gray-200 dark:bg-gray-700 px-1 rounded">
 									gpt-5(high)
 								</code>
-								.
+								{t("settings.reasoning.descriptionSuffix")}
 							</p>
 
 							<div class="space-y-3">
 								<label class="block">
 									<span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-										Default Effort Level
+										{t("settings.reasoning.defaultEffortLevel")}
 									</span>
 									<select
 										value={reasoningEffortLevel()}
@@ -2363,17 +2483,25 @@ export function SettingsPage() {
 										}
 										class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-smooth [&>option]:bg-white [&>option]:dark:bg-gray-900 [&>option]:text-gray-900 [&>option]:dark:text-gray-100"
 									>
-										<option value="none">None (disabled)</option>
-										<option value="low">Low (~1,024 tokens)</option>
-										<option value="medium">Medium (~8,192 tokens)</option>
-										<option value="high">High (~24,576 tokens)</option>
-										<option value="xhigh">Extra High (~32,768 tokens)</option>
+										<option value="none">
+											{t("settings.level.noneDisabled")}
+										</option>
+										<option value="low">{t("settings.level.low1024")}</option>
+										<option value="medium">
+											{t("settings.level.medium8192Approx")}
+										</option>
+										<option value="high">
+											{t("settings.level.high24576")}
+										</option>
+										<option value="xhigh">
+											{t("settings.level.extraHigh32768")}
+										</option>
 									</select>
 								</label>
 
 								<div class="flex items-center justify-between pt-2">
 									<span class="text-sm text-gray-600 dark:text-gray-400">
-										Current:{" "}
+										{t("settings.reasoning.current")}:{" "}
 										<span class="font-medium text-brand-600 dark:text-brand-400">
 											{reasoningEffortLevel()}
 										</span>
@@ -2384,13 +2512,17 @@ export function SettingsPage() {
 										onClick={saveReasoningEffort}
 										disabled={savingReasoningEffort()}
 									>
-										{savingReasoningEffort() ? "Saving..." : "Apply"}
+										{savingReasoningEffort()
+											? t("common.saving")
+											: t("settings.reasoning.apply")}
 									</Button>
 								</div>
 
 								<p class="text-xs text-gray-500 dark:text-gray-400 border-t border-gray-200 dark:border-gray-700 pt-3 mt-3">
-									<span class="font-medium">Per-request override:</span> Use
-									model suffix like{" "}
+									<span class="font-medium">
+										{t("settings.reasoning.perRequestOverride")}
+									</span>{" "}
+									{t("settings.reasoning.useModelSuffix")} model suffix like{" "}
 									<code class="bg-gray-200 dark:bg-gray-700 px-1 rounded">
 										gpt-5(high)
 									</code>{" "}
@@ -2458,7 +2590,7 @@ export function SettingsPage() {
 												}
 												class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-smooth [&>option]:bg-white [&>option]:dark:bg-gray-900 [&>option]:text-gray-900 [&>option]:dark:text-gray-100 [&>optgroup]:bg-white [&>optgroup]:dark:bg-gray-900 [&>optgroup]:text-gray-900 [&>optgroup]:dark:text-gray-100"
 											>
-												<option value="">Select model...</option>
+												<option value="">{t("common.selectModel")}</option>
 												<Show when={customModels.length > 0}>
 													<optgroup label="Custom Providers">
 														<For each={customModels}>
@@ -2801,7 +2933,9 @@ export function SettingsPage() {
 																				: ""
 																		}`}
 																	>
-																		<option value="">Select target...</option>
+																		<option value="">
+																			{t("common.selectTarget")}
+																		</option>
 																		<Show when={customModels.length > 0}>
 																			<optgroup label="Custom Provider">
 																				<For each={customModels}>
@@ -2928,12 +3062,24 @@ export function SettingsPage() {
 																	class={`shrink-0 px-2 py-1 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/50 rounded text-xs font-medium min-w-[70px] [&>option]:bg-white [&>option]:dark:bg-gray-800 [&>option]:text-gray-900 [&>option]:dark:text-gray-100 ${savingSlotReasoningLevels().has(slot.id) ? "opacity-50 cursor-not-allowed" : ""}`}
 																	title="GPT reasoning level for this slot"
 																>
-																	<option value="none">None</option>
-																	<option value="minimal">Min</option>
-																	<option value="low">Low</option>
-																	<option value="medium">Med</option>
-																	<option value="high">High</option>
-																	<option value="xhigh">xHigh</option>
+																	<option value="none">
+																		{t("settings.level.short.none")}
+																	</option>
+																	<option value="minimal">
+																		{t("settings.level.short.min")}
+																	</option>
+																	<option value="low">
+																		{t("settings.level.short.low")}
+																	</option>
+																	<option value="medium">
+																		{t("settings.level.short.med")}
+																	</option>
+																	<option value="high">
+																		{t("settings.level.short.high")}
+																	</option>
+																	<option value="xhigh">
+																		{t("settings.level.short.xhigh")}
+																	</option>
 																</select>
 															</Show>
 														</div>
@@ -3026,7 +3172,9 @@ export function SettingsPage() {
 																		: ""
 																}`}
 															>
-																<option value="">Select target...</option>
+																<option value="">
+																	{t("common.selectTarget")}
+																</option>
 																<Show when={customModels.length > 0}>
 																	<optgroup label="Custom Provider">
 																		<For each={customModels}>
@@ -3188,7 +3336,7 @@ export function SettingsPage() {
 														}
 														class="flex-1 min-w-0 px-2 py-1.5 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-lg text-xs focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-smooth [&>option]:bg-white [&>option]:dark:bg-gray-900 [&>option]:text-gray-900 [&>option]:dark:text-gray-100 [&>optgroup]:bg-white [&>optgroup]:dark:bg-gray-900 [&>optgroup]:text-gray-900 [&>optgroup]:dark:text-gray-100"
 													>
-														<option value="">Select target...</option>
+														<option value="">{t("common.selectTarget")}</option>
 														<Show when={customModels.length > 0}>
 															<optgroup label="Custom Provider">
 																<For each={customModels}>
@@ -3320,10 +3468,14 @@ export function SettingsPage() {
 										<table class="w-full text-sm">
 											<thead>
 												<tr class="text-left text-xs text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
-													<th class="pb-2 font-medium">Name</th>
-													<th class="pb-2 font-medium">Base URL</th>
-													<th class="pb-2 font-medium">Models</th>
-													<th class="pb-2 font-medium w-20">Actions</th>
+													<th class="pb-2 font-medium">{t("common.name")}</th>
+													<th class="pb-2 font-medium">
+														{t("common.baseUrl")}
+													</th>
+													<th class="pb-2 font-medium">{t("common.models")}</th>
+													<th class="pb-2 font-medium w-20">
+														{t("common.actions")}
+													</th>
 												</tr>
 											</thead>
 											<tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -3976,7 +4128,7 @@ export function SettingsPage() {
 										}
 										class="flex-1 px-3 py-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent [&>option]:bg-white [&>option]:dark:bg-gray-900 [&>option]:text-gray-900 [&>option]:dark:text-gray-100"
 									>
-										<option value="">Select provider...</option>
+										<option value="">{t("common.selectProvider")}</option>
 										<option value="gemini">Gemini</option>
 										<option value="claude">Claude</option>
 										<option value="qwen">Qwen</option>
@@ -4023,7 +4175,7 @@ export function SettingsPage() {
 												}
 												class="flex-[2] px-3 py-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent [&>option]:bg-white [&>option]:dark:bg-gray-900 [&>option]:text-gray-900 [&>option]:dark:text-gray-100 [&>optgroup]:bg-white [&>optgroup]:dark:bg-gray-900 [&>optgroup]:text-gray-900 [&>optgroup]:dark:text-gray-100"
 											>
-												<option value="">Select model...</option>
+												<option value="">{t("common.selectModel")}</option>
 												{/* Amp Model Mappings (target models) */}
 												<Show when={mappedModels.length > 0}>
 													<optgroup label="Amp Model Mappings">
@@ -4063,7 +4215,7 @@ export function SettingsPage() {
 									>
 										<Show
 											when={savingExcludedModels()}
-											fallback={<span>Add</span>}
+											fallback={<span>{t("common.add")}</span>}
 										>
 											<svg
 												class="w-4 h-4 animate-spin"
@@ -4090,7 +4242,9 @@ export function SettingsPage() {
 
 								{/* Current exclusions */}
 								<Show when={loadingExcludedModels()}>
-									<div class="text-center py-4 text-gray-500">Loading...</div>
+									<div class="text-center py-4 text-gray-500">
+										{t("common.loading")}
+									</div>
 								</Show>
 
 								<Show
@@ -4100,7 +4254,7 @@ export function SettingsPage() {
 									}
 								>
 									<div class="text-center py-4 text-gray-400 dark:text-gray-500 text-sm">
-										No models excluded yet
+										{t("settings.oauthExcluded.noModels")}
 									</div>
 								</Show>
 
@@ -4169,14 +4323,12 @@ export function SettingsPage() {
 						classList={{ hidden: activeTab() !== "providers" }}
 					>
 						<h2 class="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
-							Copilot API Detection
+							{t("settings.copilot.title")}
 						</h2>
 
 						<div class="space-y-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
 							<p class="text-xs text-gray-500 dark:text-gray-400">
-								ProxyPal automatically detects and uses copilot-api for GitHub
-								Copilot integration. No manual setup required - it works
-								automatically.
+								{t("settings.copilot.description")}
 							</p>
 
 							<Button
@@ -4185,7 +4337,9 @@ export function SettingsPage() {
 								onClick={runCopilotDetection}
 								disabled={detectingCopilot()}
 							>
-								{detectingCopilot() ? "Detecting..." : "Check System"}
+								{detectingCopilot()
+									? t("settings.copilot.detecting")
+									: t("settings.copilot.checkSystem")}
 							</Button>
 
 							<Show when={copilotDetection()}>
@@ -4195,7 +4349,9 @@ export function SettingsPage() {
 											<span
 												class={`w-2 h-2 rounded-full ${detection().nodeAvailable ? "bg-green-500" : "bg-red-500"}`}
 											/>
-											<span class="font-medium">Node.js:</span>
+											<span class="font-medium">
+												{t("settings.copilot.nodeJsLabel")}
+											</span>
 											<span
 												class={
 													detection().nodeAvailable
@@ -4204,8 +4360,9 @@ export function SettingsPage() {
 												}
 											>
 												{detection().nodeAvailable
-													? detection().nodeBin || "Available"
-													: "Not Found"}
+													? detection().nodeBin ||
+														t("settings.copilot.available")
+													: t("settings.copilot.notFound")}
 											</span>
 										</div>
 
@@ -4213,7 +4370,9 @@ export function SettingsPage() {
 											<span
 												class={`w-2 h-2 rounded-full ${detection().installed ? "bg-green-500" : "bg-blue-500"}`}
 											/>
-											<span class="font-medium">copilot-api:</span>
+											<span class="font-medium">
+												{t("settings.copilot.copilotApiLabel")}
+											</span>
 											<span
 												class={
 													detection().installed
@@ -4222,16 +4381,14 @@ export function SettingsPage() {
 												}
 											>
 												{detection().installed
-													? `Installed${detection().version ? ` (v${detection().version})` : ""}`
-													: "Will download automatically"}
+													? `${t("settings.copilot.installed")}${detection().version ? ` (v${detection().version})` : ""}`
+													: t("settings.copilot.willDownload")}
 											</span>
 										</div>
 
 										<Show when={!detection().installed}>
 											<div class="text-gray-500 dark:text-gray-400 pl-4">
-												copilot-api will be downloaded automatically on first
-												use via npx. This is a one-time process and requires
-												internet connection.
+												{t("settings.copilot.downloadHint")}
 											</div>
 										</Show>
 
@@ -4239,7 +4396,7 @@ export function SettingsPage() {
 											when={detection().installed && detection().copilotBin}
 										>
 											<div class="text-gray-500 dark:text-gray-400 pl-4">
-												Path:{" "}
+												{t("settings.copilot.path")}:{" "}
 												<code class="bg-gray-200 dark:bg-gray-700 px-1 rounded">
 													{detection().copilotBin}
 												</code>
@@ -4248,7 +4405,7 @@ export function SettingsPage() {
 
 										<Show when={detection().npxBin}>
 											<div class="text-gray-500 dark:text-gray-400 pl-4">
-												npx available at{" "}
+												{t("settings.copilot.npxAvailableAt")}{" "}
 												<code class="bg-gray-200 dark:bg-gray-700 px-1 rounded">
 													{detection().npxBin}
 												</code>
@@ -4257,9 +4414,11 @@ export function SettingsPage() {
 
 										<Show when={!detection().nodeAvailable}>
 											<div class="mt-2 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-red-700 dark:text-red-400">
-												<p class="font-medium">Node.js not found</p>
+												<p class="font-medium">
+													{t("settings.copilot.nodeNotFound")}
+												</p>
 												<p class="mt-1">
-													Install Node.js from{" "}
+													{t("settings.copilot.installNodePrefix")}{" "}
 													<a
 														href="https://nodejs.org/"
 														target="_blank"
@@ -4268,12 +4427,12 @@ export function SettingsPage() {
 													>
 														nodejs.org
 													</a>{" "}
-													or use a version manager (nvm, volta, fnm).
+													{t("settings.copilot.installNodeSuffix")}
 												</p>
 												<Show when={detection().checkedNodePaths.length > 0}>
 													<details class="mt-2">
 														<summary class="cursor-pointer text-xs">
-															Checked paths
+															{t("settings.copilot.checkedPaths")}
 														</summary>
 														<ul class="mt-1 pl-4 text-xs opacity-75">
 															<For each={detection().checkedNodePaths}>
@@ -4894,13 +5053,16 @@ export function SettingsPage() {
 									</a>{" "}
 									→ Networks → Tunnels
 								</li>
-								<li>Create a new tunnel and copy the token</li>
+								<li>{t("settings.cloudflare.instructions.createTunnel")}</li>
 								<li>
 									<strong class="text-gray-900 dark:text-white">
-										Important:
+										{t("settings.cloudflare.instructions.important")}
 									</strong>{" "}
-									Configure a <strong>Public Hostname</strong> in the tunnel
-									settings:
+									{t("settings.cloudflare.instructions.configurePrefix")}{" "}
+									<strong>
+										{t("settings.cloudflare.instructions.publicHostname")}
+									</strong>{" "}
+									{t("settings.cloudflare.instructions.configureSuffix")}
 									<ul class="list-disc list-inside ml-4 mt-1 space-y-1">
 										<li>
 											Subdomain: your choice (e.g.,{" "}
@@ -4909,7 +5071,7 @@ export function SettingsPage() {
 											</code>
 											)
 										</li>
-										<li>Domain: select your domain</li>
+										<li>{t("settings.cloudflare.instructions.domain")}</li>
 										<li>
 											Service Type:{" "}
 											<code class="bg-gray-200 dark:bg-gray-700 px-1 rounded">
@@ -4925,12 +5087,11 @@ export function SettingsPage() {
 										</li>
 									</ul>
 								</li>
-								<li>Paste the token above and enable the tunnel</li>
+								<li>{t("settings.cloudflare.instructions.enableTunnel")}</li>
 							</ol>
 							<p class="mt-3 text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 rounded-lg">
-								<strong>Note:</strong> The port routing is configured in the
-								Cloudflare dashboard, not in ProxyPal. The "Local Port" field
-								above is for reference only.
+								<strong>{t("settings.cloudflare.instructions.note")}</strong>{" "}
+								{t("settings.cloudflare.instructions.noteText")}
 							</p>
 						</div>
 					</div>
@@ -5042,7 +5203,7 @@ export function SettingsPage() {
 												>
 													<Show
 														when={savingYaml()}
-														fallback={<span>Save Changes</span>}
+														fallback={<span>{t("common.saveChanges")}</span>}
 													>
 														<svg
 															class="w-4 h-4 animate-spin mr-1.5"
@@ -5520,7 +5681,7 @@ export function SettingsPage() {
 														navigator.clipboard.writeText(
 															result().result.shellConfig!,
 														);
-														toastStore.success("Copied to clipboard");
+														toastStore.success(t("common.copied"));
 													}}
 													class="text-xs text-brand-500 hover:text-brand-600"
 												>
@@ -5555,7 +5716,7 @@ export function SettingsPage() {
 										variant="primary"
 										onClick={() => setConfigResult(null)}
 									>
-										Done
+										{t("agentSetup.configModal.done")}
 									</Button>
 								</div>
 							</div>

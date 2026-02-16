@@ -1,5 +1,6 @@
 import { createEffect, createSignal, For, Show } from "solid-js";
 import { Button } from "../components/ui";
+import { useI18n } from "../i18n";
 import type {
 	ClaudeApiKey,
 	CodexApiKey,
@@ -42,6 +43,7 @@ const TABS: Tab[] = [
 ];
 
 export function ApiKeysPage() {
+	const { t } = useI18n();
 	const { setCurrentPage, proxyStatus } = appStore;
 	const [activeTab, setActiveTab] = createSignal<TabId>("gemini");
 	const [loading, setLoading] = createSignal(false);
@@ -110,8 +112,8 @@ export function ApiKeysPage() {
 	const loadKeys = async () => {
 		if (!proxyStatus().running) {
 			toastStore.error(
-				"Proxy not running",
-				"Start the proxy to manage API keys",
+				t("apiKeys.toasts.proxyNotRunning"),
+				t("apiKeys.toasts.startProxyToManageApiKeys"),
 			);
 			return;
 		}
@@ -132,7 +134,7 @@ export function ApiKeysPage() {
 			setVertexKeys(vertex);
 		} catch (error) {
 			console.error("Failed to load API keys:", error);
-			toastStore.error("Failed to load API keys", String(error));
+			toastStore.error(t("apiKeys.toasts.failedToLoadApiKeys"), String(error));
 		} finally {
 			setLoading(false);
 		}
@@ -141,7 +143,7 @@ export function ApiKeysPage() {
 	const handleAddGeminiKey = async () => {
 		const key = newGeminiKey();
 		if (!key.apiKey.trim()) {
-			toastStore.error("API key required");
+			toastStore.error(t("apiKeys.toasts.apiKeyRequired"));
 			return;
 		}
 
@@ -152,9 +154,11 @@ export function ApiKeysPage() {
 			setGeminiKeys(updated);
 			setNewGeminiKey({ apiKey: "" });
 			setShowAddForm(false);
-			toastStore.success("Gemini API key added");
+			toastStore.success(
+				t("apiKeys.toasts.apiKeyAdded", { provider: "Gemini" }),
+			);
 		} catch (error) {
-			toastStore.error("Failed to add key", String(error));
+			toastStore.error(t("apiKeys.toasts.failedToAddKey"), String(error));
 		} finally {
 			setLoading(false);
 		}
@@ -166,9 +170,11 @@ export function ApiKeysPage() {
 			const updated = geminiKeys().filter((_, i) => i !== index);
 			await setGeminiApiKeys(updated);
 			setGeminiKeys(updated);
-			toastStore.success("Gemini API key deleted");
+			toastStore.success(
+				t("apiKeys.toasts.apiKeyDeleted", { provider: "Gemini" }),
+			);
 		} catch (error) {
-			toastStore.error("Failed to delete key", String(error));
+			toastStore.error(t("apiKeys.toasts.failedToDeleteKey"), String(error));
 		} finally {
 			setLoading(false);
 		}
@@ -177,7 +183,7 @@ export function ApiKeysPage() {
 	const handleAddClaudeKey = async () => {
 		const key = newClaudeKey();
 		if (!key.apiKey.trim()) {
-			toastStore.error("API key required");
+			toastStore.error(t("apiKeys.toasts.apiKeyRequired"));
 			return;
 		}
 
@@ -188,9 +194,11 @@ export function ApiKeysPage() {
 			setClaudeKeys(updated);
 			setNewClaudeKey({ apiKey: "" });
 			setShowAddForm(false);
-			toastStore.success("Claude API key added");
+			toastStore.success(
+				t("apiKeys.toasts.apiKeyAdded", { provider: "Claude" }),
+			);
 		} catch (error) {
-			toastStore.error("Failed to add key", String(error));
+			toastStore.error(t("apiKeys.toasts.failedToAddKey"), String(error));
 		} finally {
 			setLoading(false);
 		}
@@ -202,9 +210,11 @@ export function ApiKeysPage() {
 			const updated = claudeKeys().filter((_, i) => i !== index);
 			await setClaudeApiKeys(updated);
 			setClaudeKeys(updated);
-			toastStore.success("Claude API key deleted");
+			toastStore.success(
+				t("apiKeys.toasts.apiKeyDeleted", { provider: "Claude" }),
+			);
 		} catch (error) {
-			toastStore.error("Failed to delete key", String(error));
+			toastStore.error(t("apiKeys.toasts.failedToDeleteKey"), String(error));
 		} finally {
 			setLoading(false);
 		}
@@ -213,7 +223,7 @@ export function ApiKeysPage() {
 	const handleAddCodexKey = async () => {
 		const key = newCodexKey();
 		if (!key.apiKey.trim()) {
-			toastStore.error("API key required");
+			toastStore.error(t("apiKeys.toasts.apiKeyRequired"));
 			return;
 		}
 
@@ -224,9 +234,11 @@ export function ApiKeysPage() {
 			setCodexKeys(updated);
 			setNewCodexKey({ apiKey: "" });
 			setShowAddForm(false);
-			toastStore.success("Codex API key added");
+			toastStore.success(
+				t("apiKeys.toasts.apiKeyAdded", { provider: "Codex" }),
+			);
 		} catch (error) {
-			toastStore.error("Failed to add key", String(error));
+			toastStore.error(t("apiKeys.toasts.failedToAddKey"), String(error));
 		} finally {
 			setLoading(false);
 		}
@@ -238,9 +250,11 @@ export function ApiKeysPage() {
 			const updated = codexKeys().filter((_, i) => i !== index);
 			await setCodexApiKeys(updated);
 			setCodexKeys(updated);
-			toastStore.success("Codex API key deleted");
+			toastStore.success(
+				t("apiKeys.toasts.apiKeyDeleted", { provider: "Codex" }),
+			);
 		} catch (error) {
-			toastStore.error("Failed to delete key", String(error));
+			toastStore.error(t("apiKeys.toasts.failedToDeleteKey"), String(error));
 		} finally {
 			setLoading(false);
 		}
@@ -249,7 +263,7 @@ export function ApiKeysPage() {
 	const handleAddVertexKey = async () => {
 		const key = newVertexKey();
 		if (!key.apiKey.trim()) {
-			toastStore.error("API key required");
+			toastStore.error(t("apiKeys.toasts.apiKeyRequired"));
 			return;
 		}
 
@@ -265,9 +279,11 @@ export function ApiKeysPage() {
 				baseUrl: undefined,
 			});
 			setShowAddForm(false);
-			toastStore.success("Vertex API key added");
+			toastStore.success(
+				t("apiKeys.toasts.apiKeyAdded", { provider: "Vertex" }),
+			);
 		} catch (error) {
-			toastStore.error("Failed to add key", String(error));
+			toastStore.error(t("apiKeys.toasts.failedToAddKey"), String(error));
 		} finally {
 			setLoading(false);
 		}
@@ -279,9 +295,11 @@ export function ApiKeysPage() {
 			const updated = vertexKeys().filter((_, i) => i !== index);
 			await setVertexApiKeys(updated);
 			setVertexKeys(updated);
-			toastStore.success("Vertex API key deleted");
+			toastStore.success(
+				t("apiKeys.toasts.apiKeyDeleted", { provider: "Vertex" }),
+			);
 		} catch (error) {
-			toastStore.error("Failed to delete key", String(error));
+			toastStore.error(t("apiKeys.toasts.failedToDeleteKey"), String(error));
 		} finally {
 			setLoading(false);
 		}
@@ -290,11 +308,11 @@ export function ApiKeysPage() {
 	const handleAddOpenaiProvider = async () => {
 		const provider = newOpenaiProvider();
 		if (!provider.name.trim() || !provider.baseUrl.trim()) {
-			toastStore.error("Name and Base URL required");
+			toastStore.error(t("apiKeys.toasts.nameAndBaseUrlRequired"));
 			return;
 		}
 		if (!provider.apiKeyEntries[0]?.apiKey.trim()) {
-			toastStore.error("At least one API key required");
+			toastStore.error(t("apiKeys.toasts.atLeastOneApiKeyRequired"));
 			return;
 		}
 
@@ -311,9 +329,9 @@ export function ApiKeysPage() {
 			setShowAddForm(false);
 			setBulkAddMode(false);
 			setBulkKeysInput("");
-			toastStore.success("OpenAI-compatible provider added");
+			toastStore.success(t("apiKeys.toasts.openAiCompatibleProviderAdded"));
 		} catch (error) {
-			toastStore.error("Failed to add provider", String(error));
+			toastStore.error(t("apiKeys.toasts.failedToAddProvider"), String(error));
 		} finally {
 			setLoading(false);
 		}
@@ -325,9 +343,12 @@ export function ApiKeysPage() {
 			const updated = openaiProviders().filter((_, i) => i !== index);
 			await setOpenAICompatibleProviders(updated);
 			setOpenaiProviders(updated);
-			toastStore.success("Provider deleted");
+			toastStore.success(t("apiKeys.toasts.providerDeleted"));
 		} catch (error) {
-			toastStore.error("Failed to delete provider", String(error));
+			toastStore.error(
+				t("apiKeys.toasts.failedToDeleteProvider"),
+				String(error),
+			);
 		} finally {
 			setLoading(false);
 		}
@@ -359,11 +380,11 @@ export function ApiKeysPage() {
 	const handleUpdateProvider = async () => {
 		const provider = newOpenaiProvider();
 		if (!provider.name.trim() || !provider.baseUrl.trim()) {
-			toastStore.error("Name and Base URL required");
+			toastStore.error(t("apiKeys.toasts.nameAndBaseUrlRequired"));
 			return;
 		}
 		if (!provider.apiKeyEntries[0]?.apiKey.trim()) {
-			toastStore.error("At least one API key required");
+			toastStore.error(t("apiKeys.toasts.atLeastOneApiKeyRequired"));
 			return;
 		}
 
@@ -387,9 +408,12 @@ export function ApiKeysPage() {
 			setShowAddForm(false);
 			setBulkAddMode(false);
 			setBulkKeysInput("");
-			toastStore.success("Provider updated");
+			toastStore.success(t("apiKeys.toasts.providerUpdated"));
 		} catch (error) {
-			toastStore.error("Failed to update provider", String(error));
+			toastStore.error(
+				t("apiKeys.toasts.failedToUpdateProvider"),
+				String(error),
+			);
 		} finally {
 			setLoading(false);
 		}
@@ -444,7 +468,7 @@ export function ApiKeysPage() {
 			// Reload Tauri config so Settings shows updated providers
 			await reloadConfig();
 		} catch (error) {
-			toastStore.error("Failed to add model", String(error));
+			toastStore.error(t("apiKeys.toasts.failedToAddModel"), String(error));
 		} finally {
 			setLoading(false);
 		}
@@ -468,11 +492,11 @@ export function ApiKeysPage() {
 		try {
 			await setOpenAICompatibleProviders(updated);
 			setOpenaiProviders(updated);
-			toastStore.success("Model removed");
+			toastStore.success(t("apiKeys.toasts.modelRemoved"));
 			// Reload Tauri config so Settings shows updated providers
 			await reloadConfig();
 		} catch (error) {
-			toastStore.error("Failed to remove model", String(error));
+			toastStore.error(t("apiKeys.toasts.failedToRemoveModel"), String(error));
 		} finally {
 			setLoading(false);
 		}
@@ -487,11 +511,11 @@ export function ApiKeysPage() {
 			await setOpenAICompatibleProviders(openaiProviders());
 			setShowModelManager(false);
 			setManagingProviderIndex(null);
-			toastStore.success("Models saved");
+			toastStore.success(t("apiKeys.toasts.modelsSaved"));
 			// Reload Tauri config so Settings shows updated providers
 			await reloadConfig();
 		} catch (error) {
-			toastStore.error("Failed to save models", String(error));
+			toastStore.error(t("apiKeys.toasts.failedToSaveModels"), String(error));
 		} finally {
 			setLoading(false);
 		}
@@ -513,14 +537,17 @@ export function ApiKeysPage() {
 			);
 
 			if (providerModels?.error) {
-				toastStore.error("Failed to fetch models", providerModels.error);
+				toastStore.error(
+					t("apiKeys.toasts.failedToFetchModels"),
+					providerModels.error,
+				);
 				return;
 			}
 
 			if (!providerModels || providerModels.models.length === 0) {
 				toastStore.warning(
-					"No models found",
-					"The provider returned no models",
+					t("apiKeys.toasts.noModelsFound"),
+					t("apiKeys.toasts.providerReturnedNoModels"),
 				);
 				return;
 			}
@@ -534,7 +561,10 @@ export function ApiKeysPage() {
 			);
 
 			if (newModels.length === 0) {
-				toastStore.info("No new models", "All fetched models already exist");
+				toastStore.info(
+					t("apiKeys.toasts.noNewModels"),
+					t("apiKeys.toasts.allFetchedModelsAlreadyExist"),
+				);
 				return;
 			}
 
@@ -554,12 +584,14 @@ export function ApiKeysPage() {
 			await setOpenAICompatibleProviders(updated);
 			setOpenaiProviders(updated);
 			toastStore.success(
-				`Added ${newModels.length} models`,
-				`Total: ${updated[index].models?.length || 0} models`,
+				t("apiKeys.toasts.addedModels", { count: newModels.length }),
+				t("apiKeys.toasts.totalModels", {
+					count: updated[index].models?.length || 0,
+				}),
 			);
 			await reloadConfig();
 		} catch (error) {
-			toastStore.error("Failed to fetch models", String(error));
+			toastStore.error(t("apiKeys.toasts.failedToFetchModels"), String(error));
 		} finally {
 			setFetchingModels(false);
 		}
@@ -587,18 +619,20 @@ export function ApiKeysPage() {
 			});
 			if (result.success) {
 				toastStore.success(
-					"Connection successful",
-					result.modelsFound ? `Found ${result.modelsFound} models` : undefined,
+					t("apiKeys.toasts.connectionSuccessful"),
+					result.modelsFound
+						? t("apiKeys.toasts.foundModels", { count: result.modelsFound })
+						: undefined,
 				);
 			} else {
-				toastStore.error("Connection failed", result.message);
+				toastStore.error(t("apiKeys.toasts.connectionFailed"), result.message);
 			}
 		} catch (error) {
 			setTestResult({
 				success: false,
 				message: String(error),
 			});
-			toastStore.error("Test failed", String(error));
+			toastStore.error(t("apiKeys.toasts.testFailed"), String(error));
 		} finally {
 			setTestingIndex(null);
 			setTestingNewProvider(false);
@@ -635,7 +669,7 @@ export function ApiKeysPage() {
 						</svg>
 					</Button>
 					<h1 class="font-bold text-lg text-gray-900 dark:text-gray-100">
-						API Keys
+						{t("apiKeys.title")}
 					</h1>
 					<Show when={loading()}>
 						<span class="text-xs text-gray-400 ml-2 flex items-center gap-1">
@@ -654,7 +688,7 @@ export function ApiKeysPage() {
 									d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
 								/>
 							</svg>
-							Loading
+							{t("common.loading")}
 						</span>
 					</Show>
 				</div>
@@ -679,11 +713,10 @@ export function ApiKeysPage() {
 						</svg>
 						<div>
 							<p class="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-								Proxy not running
+								{t("apiKeys.proxyNotRunning")}
 							</p>
 							<p class="text-xs text-yellow-600 dark:text-yellow-400 mt-0.5">
-								Start the proxy server to manage API keys via the Management
-								API.
+								{t("apiKeys.startProxyServerDescription")}
 							</p>
 						</div>
 					</div>
@@ -717,8 +750,7 @@ export function ApiKeysPage() {
 
 					{/* Info text */}
 					<p class="text-xs text-gray-500 dark:text-gray-400">
-						Add your own API keys to use alongside OAuth-authenticated accounts.
-						These keys are stored in CLIProxyAPI and used for load balancing.
+						{t("apiKeys.description")}
 					</p>
 
 					{/* Gemini Tab */}
@@ -770,7 +802,7 @@ export function ApiKeysPage() {
 								<div class="p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 space-y-3">
 									<label class="block">
 										<span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-											API Key *
+											{t("apiKeys.labels.apiKeyRequired")}
 										</span>
 										<input
 											type="password"
@@ -781,13 +813,13 @@ export function ApiKeysPage() {
 													apiKey: e.currentTarget.value,
 												})
 											}
-											placeholder="AIza..."
+											placeholder={t("apiKeys.placeholders.geminiApiKey")}
 											class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent"
 										/>
 									</label>
 									<label class="block">
 										<span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-											Base URL (optional)
+											{t("apiKeys.labels.baseUrlOptional")}
 										</span>
 										<input
 											type="text"
@@ -798,13 +830,13 @@ export function ApiKeysPage() {
 													baseUrl: e.currentTarget.value || undefined,
 												})
 											}
-											placeholder="https://generativelanguage.googleapis.com"
+											placeholder={t("apiKeys.placeholders.geminiBaseUrl")}
 											class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent"
 										/>
 									</label>
 									<label class="block">
 										<span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-											Prefix (optional)
+											{t("apiKeys.labels.prefixOptional")}
 										</span>
 										<input
 											type="text"
@@ -815,7 +847,7 @@ export function ApiKeysPage() {
 													prefix: e.currentTarget.value || undefined,
 												})
 											}
-											placeholder="e.g. gemini-prod"
+											placeholder={t("apiKeys.placeholders.geminiPrefix")}
 											class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent"
 										/>
 									</label>
@@ -826,14 +858,14 @@ export function ApiKeysPage() {
 											onClick={handleAddGeminiKey}
 											disabled={loading()}
 										>
-											Add Key
+											{t("apiKeys.actions.addKey")}
 										</Button>
 										<Button
 											variant="ghost"
 											size="sm"
 											onClick={() => setShowAddForm(false)}
 										>
-											Cancel
+											{t("common.cancel")}
 										</Button>
 									</div>
 								</div>
@@ -860,7 +892,7 @@ export function ApiKeysPage() {
 											d="M12 4v16m8-8H4"
 										/>
 									</svg>
-									Add Gemini API Key
+									{t("apiKeys.actions.addGeminiApiKey")}
 								</Button>
 							</Show>
 						</div>
@@ -913,7 +945,7 @@ export function ApiKeysPage() {
 								<div class="p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 space-y-3">
 									<label class="block">
 										<span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-											API Key *
+											{t("apiKeys.labels.apiKeyRequired")}
 										</span>
 										<input
 											type="password"
@@ -924,13 +956,13 @@ export function ApiKeysPage() {
 													apiKey: e.currentTarget.value,
 												})
 											}
-											placeholder="sk-ant-..."
+											placeholder={t("apiKeys.placeholders.claudeApiKey")}
 											class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent"
 										/>
 									</label>
 									<label class="block">
 										<span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-											Base URL (optional)
+											{t("apiKeys.labels.baseUrlOptional")}
 										</span>
 										<input
 											type="text"
@@ -941,13 +973,13 @@ export function ApiKeysPage() {
 													baseUrl: e.currentTarget.value || undefined,
 												})
 											}
-											placeholder="https://api.anthropic.com"
+											placeholder={t("apiKeys.placeholders.claudeBaseUrl")}
 											class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent"
 										/>
 									</label>
 									<label class="block">
 										<span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-											Prefix (optional)
+											{t("apiKeys.labels.prefixOptional")}
 										</span>
 										<input
 											type="text"
@@ -958,7 +990,7 @@ export function ApiKeysPage() {
 													prefix: e.currentTarget.value || undefined,
 												})
 											}
-											placeholder="e.g. claude-prod"
+											placeholder={t("apiKeys.placeholders.claudePrefix")}
 											class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent"
 										/>
 									</label>
@@ -969,14 +1001,14 @@ export function ApiKeysPage() {
 											onClick={handleAddClaudeKey}
 											disabled={loading()}
 										>
-											Add Key
+											{t("apiKeys.actions.addKey")}
 										</Button>
 										<Button
 											variant="ghost"
 											size="sm"
 											onClick={() => setShowAddForm(false)}
 										>
-											Cancel
+											{t("common.cancel")}
 										</Button>
 									</div>
 								</div>
@@ -1002,7 +1034,7 @@ export function ApiKeysPage() {
 											d="M12 4v16m8-8H4"
 										/>
 									</svg>
-									Add Claude API Key
+									{t("apiKeys.actions.addClaudeApiKey")}
 								</Button>
 							</Show>
 						</div>
@@ -1055,7 +1087,7 @@ export function ApiKeysPage() {
 								<div class="p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 space-y-3">
 									<label class="block">
 										<span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-											API Key *
+											{t("apiKeys.labels.apiKeyRequired")}
 										</span>
 										<input
 											type="password"
@@ -1066,13 +1098,13 @@ export function ApiKeysPage() {
 													apiKey: e.currentTarget.value,
 												})
 											}
-											placeholder="sk-..."
+											placeholder={t("apiKeys.placeholders.codexApiKey")}
 											class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent"
 										/>
 									</label>
 									<label class="block">
 										<span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-											Base URL (optional)
+											{t("apiKeys.labels.baseUrlOptional")}
 										</span>
 										<input
 											type="text"
@@ -1083,13 +1115,13 @@ export function ApiKeysPage() {
 													baseUrl: e.currentTarget.value || undefined,
 												})
 											}
-											placeholder="https://api.openai.com"
+											placeholder={t("apiKeys.placeholders.codexBaseUrl")}
 											class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent"
 										/>
 									</label>
 									<label class="block">
 										<span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-											Prefix (optional)
+											{t("apiKeys.labels.prefixOptional")}
 										</span>
 										<input
 											type="text"
@@ -1100,7 +1132,7 @@ export function ApiKeysPage() {
 													prefix: e.currentTarget.value || undefined,
 												})
 											}
-											placeholder="e.g. codex-prod"
+											placeholder={t("apiKeys.placeholders.codexPrefix")}
 											class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent"
 										/>
 									</label>
@@ -1111,14 +1143,14 @@ export function ApiKeysPage() {
 											onClick={handleAddCodexKey}
 											disabled={loading()}
 										>
-											Add Key
+											{t("apiKeys.actions.addKey")}
 										</Button>
 										<Button
 											variant="ghost"
 											size="sm"
 											onClick={() => setShowAddForm(false)}
 										>
-											Cancel
+											{t("common.cancel")}
 										</Button>
 									</div>
 								</div>
@@ -1144,7 +1176,7 @@ export function ApiKeysPage() {
 											d="M12 4v16m8-8H4"
 										/>
 									</svg>
-									Add Codex API Key
+									{t("apiKeys.actions.addCodexApiKey")}
 								</Button>
 							</Show>
 						</div>
@@ -1164,12 +1196,14 @@ export function ApiKeysPage() {
 													</code>
 													<Show when={key.projectId}>
 														<p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-															Project: {key.projectId}
+															{t("apiKeys.project")}: {key.projectId}
+															{t("apiKeys.project")}: {key.projectId}
 														</p>
 													</Show>
 													<Show when={key.location}>
 														<p class="text-xs text-gray-500 dark:text-gray-400">
-															Location: {key.location}
+															{t("apiKeys.location")}: {key.location}
+															{t("apiKeys.location")}: {key.location}
 														</p>
 													</Show>
 													<Show when={key.baseUrl}>
@@ -1207,7 +1241,7 @@ export function ApiKeysPage() {
 								<div class="p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 space-y-3">
 									<label class="block">
 										<span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-											API Key *
+											{t("apiKeys.labels.apiKeyRequired")}
 										</span>
 										<input
 											type="password"
@@ -1218,13 +1252,13 @@ export function ApiKeysPage() {
 													apiKey: e.currentTarget.value,
 												})
 											}
-											placeholder="Paste your Vertex API key..."
+											placeholder={t("apiKeys.placeholders.vertexApiKey")}
 											class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent"
 										/>
 									</label>
 									<label class="block">
 										<span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-											Project ID (optional)
+											{t("apiKeys.labels.projectIdOptional")}
 										</span>
 										<input
 											type="text"
@@ -1235,13 +1269,13 @@ export function ApiKeysPage() {
 													projectId: e.currentTarget.value || undefined,
 												})
 											}
-											placeholder="your-gcp-project-id"
+											placeholder={t("apiKeys.placeholders.vertexProjectId")}
 											class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent"
 										/>
 									</label>
 									<label class="block">
 										<span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-											Location (optional)
+											{t("apiKeys.labels.locationOptional")}
 										</span>
 										<input
 											type="text"
@@ -1252,13 +1286,13 @@ export function ApiKeysPage() {
 													location: e.currentTarget.value || undefined,
 												})
 											}
-											placeholder="us-central1"
+											placeholder={t("apiKeys.placeholders.vertexLocation")}
 											class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent"
 										/>
 									</label>
 									<label class="block">
 										<span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-											Base URL (optional)
+											{t("apiKeys.labels.baseUrlOptional")}
 										</span>
 										<input
 											type="text"
@@ -1269,7 +1303,7 @@ export function ApiKeysPage() {
 													baseUrl: e.currentTarget.value || undefined,
 												})
 											}
-											placeholder="https://vertexai.googleapis.com"
+											placeholder={t("apiKeys.placeholders.vertexBaseUrl")}
 											class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent"
 										/>
 									</label>
@@ -1280,14 +1314,14 @@ export function ApiKeysPage() {
 											onClick={handleAddVertexKey}
 											disabled={loading()}
 										>
-											Add Key
+											{t("apiKeys.actions.addKey")}
 										</Button>
 										<Button
 											variant="ghost"
 											size="sm"
 											onClick={() => setShowAddForm(false)}
 										>
-											Cancel
+											{t("common.cancel")}
 										</Button>
 									</div>
 								</div>
@@ -1313,7 +1347,7 @@ export function ApiKeysPage() {
 											d="M12 4v16m8-8H4"
 										/>
 									</svg>
-									Add Vertex API Key
+									{t("apiKeys.actions.addVertexApiKey")}
 								</Button>
 							</Show>
 						</div>
@@ -1323,8 +1357,7 @@ export function ApiKeysPage() {
 					<Show when={activeTab() === "openai-compatible"}>
 						<div class="space-y-4">
 							<p class="text-xs text-gray-500 dark:text-gray-400">
-								Add OpenAI-compatible providers like OpenRouter, Together AI,
-								Groq, etc.
+								{t("apiKeys.openAiCompatibleDescription")}
 							</p>
 
 							<Show when={openaiProviders().length > 0}>
@@ -1341,7 +1374,9 @@ export function ApiKeysPage() {
 															{provider.baseUrl}
 														</p>
 														<p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
-															{provider.apiKeyEntries.length} API key(s)
+															{t("apiKeys.apiKeysCount", {
+																count: provider.apiKeyEntries.length,
+															})}
 														</p>
 													</div>
 													<div class="flex items-center gap-1">
@@ -1356,7 +1391,7 @@ export function ApiKeysPage() {
 																)
 															}
 															disabled={testingIndex() === index()}
-															title="Test connection"
+															title={t("apiKeys.actions.testConnection")}
 														>
 															<Show
 																when={testingIndex() === index()}
@@ -1401,7 +1436,7 @@ export function ApiKeysPage() {
 															variant="ghost"
 															size="sm"
 															onClick={() => handleEditProvider(index())}
-															title="Edit provider"
+															title={t("apiKeys.actions.editProvider")}
 														>
 															<svg
 																class="w-4 h-4 text-gray-500"
@@ -1421,7 +1456,7 @@ export function ApiKeysPage() {
 															variant="ghost"
 															size="sm"
 															onClick={() => handleOpenModelManager(index())}
-															title="Manage models"
+															title={t("apiKeys.actions.manageModels")}
 														>
 															<svg
 																class="w-4 h-4 text-gray-500"
@@ -1443,7 +1478,7 @@ export function ApiKeysPage() {
 															onClick={() =>
 																handleDeleteOpenaiProvider(index())
 															}
-															title="Delete provider"
+															title={t("apiKeys.actions.deleteProvider")}
 														>
 															<svg
 																class="w-4 h-4 text-red-500"
@@ -1471,7 +1506,7 @@ export function ApiKeysPage() {
 								<div class="p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 space-y-3">
 									<label class="block">
 										<span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-											Provider Name *
+											{t("apiKeys.labels.providerNameRequired")}
 										</span>
 										<input
 											type="text"
@@ -1482,13 +1517,13 @@ export function ApiKeysPage() {
 													name: e.currentTarget.value,
 												})
 											}
-											placeholder="OpenRouter"
+											placeholder={t("apiKeys.placeholders.providerName")}
 											class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent"
 										/>
 									</label>
 									<label class="block">
 										<span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-											Base URL *
+											{t("apiKeys.labels.baseUrlRequired")}
 										</span>
 										<input
 											type="text"
@@ -1499,7 +1534,7 @@ export function ApiKeysPage() {
 													baseUrl: e.currentTarget.value,
 												})
 											}
-											placeholder="https://openrouter.ai/api/v1"
+											placeholder={t("apiKeys.placeholders.providerBaseUrl")}
 											class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent"
 										/>
 									</label>
@@ -1507,7 +1542,7 @@ export function ApiKeysPage() {
 									<div class="space-y-2">
 										<div class="flex items-center justify-between">
 											<span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-												API Key(s) *
+												{t("apiKeys.labels.apiKeysRequired")}
 											</span>
 											<button
 												type="button"
@@ -1524,7 +1559,9 @@ export function ApiKeysPage() {
 												}}
 												class="text-xs text-brand-600 dark:text-brand-400 hover:underline"
 											>
-												{bulkAddMode() ? "Single key" : "Bulk add"}
+												{bulkAddMode()
+													? t("apiKeys.actions.singleKey")
+													: t("apiKeys.actions.bulkAdd")}
 											</button>
 										</div>
 
@@ -1540,7 +1577,7 @@ export function ApiKeysPage() {
 														apiKeyEntries: [{ apiKey: e.currentTarget.value }],
 													})
 												}
-												placeholder="sk-or-..."
+												placeholder={t("apiKeys.placeholders.providerApiKey")}
 												class="block w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent"
 											/>
 										</Show>
@@ -1562,7 +1599,7 @@ export function ApiKeysPage() {
 															keys.length > 0 ? keys : [{ apiKey: "" }],
 													});
 												}}
-												placeholder="Paste multiple API keys, one per line:&#10;sk-key1...&#10;sk-key2...&#10;sk-key3..."
+												placeholder={t("apiKeys.placeholders.bulkApiKeys")}
 												rows={5}
 												class="block w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent font-mono"
 											/>
@@ -1572,13 +1609,13 @@ export function ApiKeysPage() {
 														e.apiKey.trim(),
 													).length
 												}{" "}
-												key(s) detected
+												{t("apiKeys.keysDetected")}
 											</p>
 										</Show>
 									</div>
 									<label class="block">
 										<span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-											Prefix (optional)
+											{t("apiKeys.labels.prefixOptional")}
 										</span>
 										<input
 											type="text"
@@ -1589,7 +1626,7 @@ export function ApiKeysPage() {
 													prefix: e.currentTarget.value || undefined,
 												})
 											}
-											placeholder="e.g. openrouter-prod"
+											placeholder={t("apiKeys.placeholders.providerPrefix")}
 											class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent"
 										/>
 									</label>
@@ -1605,8 +1642,8 @@ export function ApiKeysPage() {
 											disabled={loading()}
 										>
 											{editingIndex() !== null
-												? "Update Provider"
-												: "Add Provider"}
+												? t("apiKeys.actions.updateProvider")
+												: t("apiKeys.actions.addProvider")}
 										</Button>
 										<Button
 											variant="secondary"
@@ -1625,7 +1662,7 @@ export function ApiKeysPage() {
 										>
 											<Show
 												when={testingNewProvider()}
-												fallback="Test Connection"
+												fallback={t("apiKeys.actions.testConnection")}
 											>
 												<svg
 													class="w-4 h-4 animate-spin mr-1"
@@ -1646,7 +1683,7 @@ export function ApiKeysPage() {
 														d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
 													/>
 												</svg>
-												Testing...
+												{t("apiKeys.testing")}
 											</Show>
 										</Button>
 										<Button
@@ -1658,7 +1695,7 @@ export function ApiKeysPage() {
 													: () => setShowAddForm(false)
 											}
 										>
-											Cancel
+											{t("common.cancel")}
 										</Button>
 									</div>
 									<Show when={testResult()}>
@@ -1669,14 +1706,18 @@ export function ApiKeysPage() {
 												when={testResult()?.success}
 												fallback={
 													<span>
-														Connection failed: {testResult()?.message}
+														{t("apiKeys.connectionFailedWithMessage", {
+															message: testResult()?.message || "",
+														})}
 													</span>
 												}
 											>
 												<span>
-													Connection successful!{" "}
+													{t("apiKeys.connectionSuccessful")}{" "}
 													{testResult()?.modelsFound
-														? `Found ${testResult()?.modelsFound} models.`
+														? t("apiKeys.foundModelsWithCount", {
+																count: testResult()?.modelsFound || 0,
+															})
 														: ""}
 												</span>
 											</Show>
@@ -1706,7 +1747,7 @@ export function ApiKeysPage() {
 											d="M12 4v16m8-8H4"
 										/>
 									</svg>
-									Add OpenAI-Compatible Provider
+									{t("apiKeys.actions.addOpenAiCompatibleProvider")}
 								</Button>
 							</Show>
 						</div>
@@ -1718,7 +1759,7 @@ export function ApiKeysPage() {
 							<div class="w-full max-w-lg bg-white dark:bg-gray-900 rounded-xl shadow-xl p-6 space-y-4">
 								<div class="flex items-center justify-between">
 									<h3 class="font-semibold text-gray-900 dark:text-gray-100">
-										Manage Models
+										{t("apiKeys.actions.manageModels")}
 									</h3>
 									<Button
 										variant="ghost"
@@ -1749,7 +1790,7 @@ export function ApiKeysPage() {
 										type="text"
 										value={newModelInput()}
 										onInput={(e) => setNewModelInput(e.currentTarget.value)}
-										placeholder="Model name (e.g., gpt-4-turbo)"
+										placeholder={t("apiKeys.placeholders.modelName")}
 										class="flex-1 px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent"
 										onKeyDown={(e) => {
 											if (e.key === "Enter") {
@@ -1763,14 +1804,14 @@ export function ApiKeysPage() {
 										onClick={handleAddModel}
 										disabled={!newModelInput().trim()}
 									>
-										Add
+										{t("common.add")}
 									</Button>
 									<Button
 										variant="secondary"
 										size="sm"
 										onClick={handleFetchModels}
 										disabled={fetchingModels()}
-										title="Fetch models from provider's /models endpoint"
+										title={t("apiKeys.actions.fetchModelsFromProvider")}
 									>
 										<Show
 											when={fetchingModels()}
@@ -1789,7 +1830,7 @@ export function ApiKeysPage() {
 															d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
 														/>
 													</svg>
-													Fetch
+													{t("apiKeys.actions.fetch")}
 												</>
 											}
 										>
@@ -1812,7 +1853,7 @@ export function ApiKeysPage() {
 													d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
 												/>
 											</svg>
-											Fetching...
+											{t("apiKeys.fetching")}
 										</Show>
 									</Button>
 								</div>
@@ -1871,7 +1912,7 @@ export function ApiKeysPage() {
 										}
 									>
 										<p class="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
-											No models added yet
+											{t("apiKeys.noModelsAddedYet")}
 										</p>
 									</Show>
 								</div>
@@ -1885,7 +1926,7 @@ export function ApiKeysPage() {
 											setManagingProviderIndex(null);
 										}}
 									>
-										Cancel
+										{t("common.cancel")}
 									</Button>
 									<Button
 										variant="primary"
@@ -1893,7 +1934,7 @@ export function ApiKeysPage() {
 										onClick={handleSaveModels}
 										disabled={loading()}
 									>
-										Save
+										{t("common.save")}
 									</Button>
 								</div>
 							</div>
@@ -1928,10 +1969,8 @@ export function ApiKeysPage() {
 									d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
 								/>
 							</svg>
-							<p class="text-sm">No API keys configured yet</p>
-							<p class="text-xs mt-1">
-								Click the button above to add your first key
-							</p>
+							<p class="text-sm">{t("apiKeys.noApiKeysConfiguredYet")}</p>
+							<p class="text-xs mt-1">{t("apiKeys.addFirstKeyHint")}</p>
 						</div>
 					</Show>
 				</div>
