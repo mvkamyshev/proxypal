@@ -18,8 +18,7 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const BINARIES_DIR = join(__dirname, "..", "src-tauri", "binaries");
-const REPO =
-  process.env.CLIPROXYAPI_REPO || "router-for-me/CLIProxyAPIPlus";
+const REPO = process.env.CLIPROXYAPI_REPO || "router-for-me/CLIProxyAPIPlus";
 
 /**
  * Validate that a file is a real executable, not a gzip archive or other invalid format.
@@ -35,7 +34,7 @@ function validateBinary(filePath) {
     rmSync(filePath, { force: true });
     throw new Error(
       `Installed file is a gzip archive, not an executable: ${filePath}\n` +
-      `This usually means the archive was copied instead of extracted.`
+        `This usually means the archive was copied instead of extracted.`,
     );
   }
   // Verify it's a known executable format
@@ -43,7 +42,9 @@ function validateBinary(filePath) {
   const isELF = buf[0] === 0x7f && buf[1] === 0x45 && buf[2] === 0x4c && buf[3] === 0x46;
   const isPE = buf[0] === 0x4d && buf[1] === 0x5a;
   if (!isMachO && !isELF && !isPE) {
-    console.warn(`Warning: Binary has unknown format (magic: ${buf.slice(0, 4).toString("hex")}): ${filePath}`);
+    console.warn(
+      `Warning: Binary has unknown format (magic: ${buf.slice(0, 4).toString("hex")}): ${filePath}`,
+    );
   }
 }
 
@@ -64,14 +65,8 @@ function getCurrentTarget() {
 
 function getAssetInfo(target, version) {
   const map = {
-    "cli-proxy-api-aarch64-apple-darwin": [
-      `CLIProxyAPIPlus_${version}_darwin_arm64.tar.gz`,
-      "tar",
-    ],
-    "cli-proxy-api-x86_64-apple-darwin": [
-      `CLIProxyAPIPlus_${version}_darwin_amd64.tar.gz`,
-      "tar",
-    ],
+    "cli-proxy-api-aarch64-apple-darwin": [`CLIProxyAPIPlus_${version}_darwin_arm64.tar.gz`, "tar"],
+    "cli-proxy-api-x86_64-apple-darwin": [`CLIProxyAPIPlus_${version}_darwin_amd64.tar.gz`, "tar"],
     "cli-proxy-api-x86_64-unknown-linux-gnu": [
       `CLIProxyAPIPlus_${version}_linux_amd64.tar.gz`,
       "tar",
@@ -93,12 +88,7 @@ function getAssetInfo(target, version) {
 }
 
 function findBinary(dir) {
-  const names = [
-    "cli-proxy-api-plus",
-    "CLIProxyAPIPlus",
-    "CLIProxyAPI",
-    "cli-proxy-api",
-  ];
+  const names = ["cli-proxy-api-plus", "CLIProxyAPIPlus", "CLIProxyAPI", "cli-proxy-api"];
   if (process.platform === "win32") {
     names.push(...names.map((n) => n + ".exe"));
   }
@@ -144,10 +134,9 @@ async function downloadTarget(target, version) {
     // Extract archive
     if (archiveType === "zip") {
       if (process.platform === "win32") {
-        execSync(
-          `powershell -Command "Expand-Archive -Force '${archivePath}' '${tempDir}'"`,
-          { stdio: "inherit" },
-        );
+        execSync(`powershell -Command "Expand-Archive -Force '${archivePath}' '${tempDir}'"`, {
+          stdio: "inherit",
+        });
       } else {
         execSync(`unzip -o -q "${archivePath}" -d "${tempDir}"`, {
           stdio: "inherit",
@@ -180,11 +169,8 @@ async function downloadTarget(target, version) {
 
 async function main() {
   // Fetch latest version
-  const apiRes = await fetch(
-    `https://api.github.com/repos/${REPO}/releases/latest`,
-  );
-  if (!apiRes.ok)
-    throw new Error(`GitHub API error (${apiRes.status}): ${apiRes.statusText}`);
+  const apiRes = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`);
+  if (!apiRes.ok) throw new Error(`GitHub API error (${apiRes.status}): ${apiRes.statusText}`);
   const release = await apiRes.json();
   const version = release.tag_name.replace(/^v/, "");
   console.log(`CLIProxyAPI version: ${version}`);

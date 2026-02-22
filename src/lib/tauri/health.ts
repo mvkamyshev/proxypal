@@ -2,49 +2,47 @@ import { invoke } from "@tauri-apps/api/core";
 
 // Provider health check
 export interface HealthStatus {
-	status: "healthy" | "degraded" | "offline" | "unconfigured";
-	latencyMs?: number;
-	lastChecked: number;
+  lastChecked: number;
+  latencyMs?: number;
+  status: "healthy" | "degraded" | "offline" | "unconfigured";
 }
 
 export interface ProviderHealth {
-	claude: HealthStatus;
-	openai: HealthStatus;
-	gemini: HealthStatus;
-	qwen: HealthStatus;
-	iflow: HealthStatus;
-	vertex: HealthStatus;
-	kiro: HealthStatus;
-	antigravity: HealthStatus;
-	kimi: HealthStatus;
+  antigravity: HealthStatus;
+  claude: HealthStatus;
+  gemini: HealthStatus;
+  iflow: HealthStatus;
+  kimi: HealthStatus;
+  kiro: HealthStatus;
+  openai: HealthStatus;
+  qwen: HealthStatus;
+  vertex: HealthStatus;
 }
 
 export async function checkProviderHealth(): Promise<ProviderHealth> {
-	return invoke("check_provider_health");
+  return invoke("check_provider_health");
 }
 
 // Test OpenAI-compatible provider connection
 export interface ProviderTestResult {
-	success: boolean;
-	message: string;
-	latencyMs?: number;
-	modelsFound?: number;
+  latencyMs?: number;
+  message: string;
+  modelsFound?: number;
+  success: boolean;
 }
 
 export async function testOpenAIProvider(
-	baseUrl: string,
-	apiKey: string,
+  baseUrl: string,
+  apiKey: string,
 ): Promise<ProviderTestResult> {
-	return invoke("test_openai_provider", { baseUrl, apiKey });
+  return invoke("test_openai_provider", { apiKey, baseUrl });
 }
 
-export async function testProviderConnection(
-	modelId: string,
-): Promise<ProviderTestResult> {
-	return invoke("test_provider_connection", { modelId });
+export async function testProviderConnection(modelId: string): Promise<ProviderTestResult> {
+  return invoke("test_provider_connection", { modelId });
 }
 
 /** Test Kiro connection via kiro-cli chat --no-interactive "/usage". */
 export async function testKiroConnection(): Promise<ProviderTestResult> {
-	return invoke("test_kiro_connection");
+  return invoke("test_kiro_connection");
 }

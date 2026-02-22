@@ -44,8 +44,8 @@ jobs:
           touch src-tauri/binaries/cli-proxy-api-aarch64-apple-darwin
           chmod +x src-tauri/binaries/cli-proxy-api-aarch64-apple-darwin
 
-      - name: TypeScript check
-        run: pnpm tsc --noEmit
+      - name: Frontend checks (ts + lint + format)
+        run: pnpm check:parallel
 
       - name: Rust check
         run: cargo check

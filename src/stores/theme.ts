@@ -4,9 +4,7 @@ export type Theme = "light" | "dark" | "system";
 
 function getSystemTheme(): "light" | "dark" {
   if (typeof window !== "undefined") {
-    return window.matchMedia("(prefers-color-scheme: dark)").matches
-      ? "dark"
-      : "light";
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   }
   return "light";
 }
@@ -68,10 +66,10 @@ function createThemeStore() {
   };
 
   return {
-    theme,
-    setTheme,
-    resolvedTheme,
     cycleTheme,
+    resolvedTheme,
+    setTheme,
+    theme,
   };
 }
 

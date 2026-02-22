@@ -6,13 +6,13 @@ import { appStore } from "./stores/app";
 import "./styles/index.css";
 
 render(
-	() => (
-		<I18nProvider
-			locale={() => appStore.config().locale}
-			setLocale={(locale: Locale) => appStore.setLocale(locale)}
-		>
-			<App />
-		</I18nProvider>
-	),
-	document.getElementById("root") as HTMLElement,
+  () => (
+    <I18nProvider
+      locale={() => appStore.config().locale}
+      setLocale={(locale: Locale) => appStore.setLocale(locale)}
+    >
+      <App />
+    </I18nProvider>
+  ),
+  document.getElementById("root") as HTMLElement,
 );

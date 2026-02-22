@@ -1,312 +1,299 @@
 import { createRoot, createSignal, onCleanup } from "solid-js";
+import { detectSystemLocale, normalizeLocale, resolveInitialLocale } from "../i18n/locale";
 import {
-	detectSystemLocale,
-	normalizeLocale,
-	resolveInitialLocale,
-} from "../i18n/locale";
-import type {
-	AppConfig,
-	AuthStatus,
-	CloudflareStatusUpdate,
-	OAuthCallback,
-	ProxyStatus,
-	SshStatusUpdate,
+  completeOAuth,
+  getAuthStatus,
+  getConfig,
+  getProxyStatus,
+  migrateAmpModelMappings,
+  onAuthStatusChanged,
+  onCloudflareStatusChanged,
+  onOAuthCallback,
+  onProxyStatusChanged,
+  onSshStatusChanged,
+  onTrayToggleProxy,
+  refreshAuthStatus,
+  saveConfig,
+  showSystemNotification,
+  startProxy,
+  stopProxy,
+  syncUsageFromProxy,
 } from "../lib/tauri";
-import {
-	completeOAuth,
-	getAuthStatus,
-	getConfig,
-	getProxyStatus,
-	migrateAmpModelMappings,
-	onAuthStatusChanged,
-	onCloudflareStatusChanged,
-	onOAuthCallback,
-	onProxyStatusChanged,
-	onSshStatusChanged,
-	onTrayToggleProxy,
-	refreshAuthStatus,
-	saveConfig,
-	showSystemNotification,
-	startProxy,
-	stopProxy,
-	syncUsageFromProxy,
+
+import type {
+  AppConfig,
+  AuthStatus,
+  CloudflareStatusUpdate,
+  OAuthCallback,
+  ProxyStatus,
+  SshStatusUpdate,
 } from "../lib/tauri";
 
 function createAppStore() {
-	// Proxy state
-	const [proxyStatus, setProxyStatus] = createSignal<ProxyStatus>({
-		running: false,
-		port: 8317,
-		endpoint: "http://localhost:8317/v1",
-	});
+  // Proxy state
+  const [proxyStatus, setProxyStatus] = createSignal<ProxyStatus>({
+    endpoint: "http://localhost:8317/v1",
+    port: 8317,
+    running: false,
+  });
 
-	// Auth state
-	const [authStatus, setAuthStatus] = createSignal<AuthStatus>({
-		claude: 0,
-		openai: 0,
-		gemini: 0,
-		qwen: 0,
-		iflow: 0,
-		vertex: 0,
-		kiro: 0,
-		antigravity: 0,
-		kimi: 0,
-	});
+  // Auth state
+  const [authStatus, setAuthStatus] = createSignal<AuthStatus>({
+    antigravity: 0,
+    claude: 0,
+    gemini: 0,
+    iflow: 0,
+    kimi: 0,
+    kiro: 0,
+    openai: 0,
+    qwen: 0,
+    vertex: 0,
+  });
 
-	// Config
-	const [config, setConfig] = createSignal<AppConfig>({
-		port: 8317,
-		autoStart: true,
-		launchAtLogin: false,
-		debug: false,
-		proxyUrl: "",
-		requestRetry: 0,
-		quotaSwitchProject: false,
-		quotaSwitchPreviewModel: false,
-		usageStatsEnabled: true,
-		requestLogging: false,
-		loggingToFile: false,
-		logsMaxTotalSizeMb: 100,
-		sidebarPinned: false,
-		ampApiKey: "",
-		ampModelMappings: [],
-		ampOpenaiProvider: undefined,
-		ampOpenaiProviders: [],
-		ampRoutingMode: "mappings",
-		routingStrategy: "round-robin",
-		forceModelMappings: false,
-		copilot: {
-			enabled: false,
-			port: 4141,
-			accountType: "individual",
-			githubToken: "",
-			rateLimit: undefined,
-			rateLimitWait: false,
-		},
-		sshConfigs: [],
-		locale: "en",
-	});
+  // Config
+  const [config, setConfig] = createSignal<AppConfig>({
+    ampApiKey: "",
+    ampModelMappings: [],
+    ampOpenaiProvider: undefined,
+    ampOpenaiProviders: [],
+    ampRoutingMode: "mappings",
+    autoStart: true,
+    copilot: {
+      accountType: "individual",
+      enabled: false,
+      githubToken: "",
+      port: 4141,
+      rateLimit: undefined,
+      rateLimitWait: false,
+    },
+    debug: false,
+    forceModelMappings: false,
+    launchAtLogin: false,
+    locale: "en",
+    loggingToFile: false,
+    logsMaxTotalSizeMb: 100,
+    port: 8317,
+    proxyUrl: "",
+    quotaSwitchPreviewModel: false,
+    quotaSwitchProject: false,
+    requestLogging: false,
+    requestRetry: 0,
+    routingStrategy: "round-robin",
+    sidebarPinned: false,
+    sshConfigs: [],
+    usageStatsEnabled: true,
+  });
 
-	// SSH Status
-	const [sshStatus, setSshStatus] = createSignal<
-		Record<string, SshStatusUpdate>
-	>({});
+  // SSH Status
+  const [sshStatus, setSshStatus] = createSignal<Record<string, SshStatusUpdate>>({});
 
-	// Cloudflare Status
-	const [cloudflareStatus, setCloudflareStatus] = createSignal<
-		Record<string, CloudflareStatusUpdate>
-	>({});
+  // Cloudflare Status
+  const [cloudflareStatus, setCloudflareStatus] = createSignal<
+    Record<string, CloudflareStatusUpdate>
+  >({});
 
-	// UI state - Start directly on dashboard
-	const [currentPage, setCurrentPage] = createSignal<
-		"dashboard" | "settings" | "api-keys" | "auth-files" | "logs" | "analytics"
-	>("dashboard");
-	const [isLoading, setIsLoading] = createSignal(false);
-	const [isInitialized, setIsInitialized] = createSignal(false);
-	const [sidebarExpanded, setSidebarExpanded] = createSignal(false);
-	const [settingsTab, setSettingsTab] = createSignal<string | null>(null);
+  // UI state - Start directly on dashboard
+  const [currentPage, setCurrentPage] = createSignal<
+    "dashboard" | "settings" | "api-keys" | "auth-files" | "logs" | "analytics"
+  >("dashboard");
+  const [isLoading, setIsLoading] = createSignal(false);
+  const [isInitialized, setIsInitialized] = createSignal(false);
+  const [sidebarExpanded, setSidebarExpanded] = createSignal(false);
+  const [settingsTab, setSettingsTab] = createSignal<string | null>(null);
 
-	// Proxy uptime tracking
-	const [proxyStartTime, setProxyStartTime] = createSignal<number | null>(null);
+  // Proxy uptime tracking
+  const [proxyStartTime, setProxyStartTime] = createSignal<number | null>(null);
 
-	// Helper to update proxy status and track uptime
-	const updateProxyStatus = (status: ProxyStatus, showNotification = false) => {
-		const wasRunning = proxyStatus().running;
-		setProxyStatus(status);
+  // Helper to update proxy status and track uptime
+  const updateProxyStatus = (status: ProxyStatus, showNotification = false) => {
+    const wasRunning = proxyStatus().running;
+    setProxyStatus(status);
 
-		// Track start time when proxy starts
-		if (status.running && !wasRunning) {
-			setProxyStartTime(Date.now());
-			if (showNotification) {
-				showSystemNotification("ProxyPal", "Proxy server is now running");
-			}
-		} else if (!status.running && wasRunning) {
-			setProxyStartTime(null);
-			if (showNotification) {
-				showSystemNotification("ProxyPal", "Proxy server has stopped");
-			}
-		}
-	};
+    // Track start time when proxy starts
+    if (status.running && !wasRunning) {
+      setProxyStartTime(Date.now());
+      if (showNotification) {
+        showSystemNotification("ProxyPal", "Proxy server is now running");
+      }
+    } else if (!status.running && wasRunning) {
+      setProxyStartTime(null);
+      if (showNotification) {
+        showSystemNotification("ProxyPal", "Proxy server has stopped");
+      }
+    }
+  };
 
-	// Initialize from backend
-	const initialize = async () => {
-		try {
-			setIsLoading(true);
+  // Initialize from backend
+  const initialize = async () => {
+    try {
+      setIsLoading(true);
 
-			// Load initial state from backend
-			const [proxyState, configState] = await Promise.all([
-				getProxyStatus(),
-				getConfig(),
-			]);
+      // Load initial state from backend
+      const [proxyState, configState] = await Promise.all([getProxyStatus(), getConfig()]);
 
-			updateProxyStatus(proxyState);
+      updateProxyStatus(proxyState);
 
-			let nextConfig: AppConfig = { ...configState };
-			let shouldSave = false;
+      let nextConfig: AppConfig = { ...configState };
+      let shouldSave = false;
 
-			const systemLocale = await detectSystemLocale();
-			const resolvedLocale = resolveInitialLocale(
-				configState.locale,
-				systemLocale,
-			);
-			if (nextConfig.locale !== resolvedLocale) {
-				nextConfig = { ...nextConfig, locale: resolvedLocale };
-				shouldSave = true;
-			}
+      const systemLocale = await detectSystemLocale();
+      const resolvedLocale = resolveInitialLocale(configState.locale, systemLocale);
+      if (nextConfig.locale !== resolvedLocale) {
+        nextConfig = { ...nextConfig, locale: resolvedLocale };
+        shouldSave = true;
+      }
 
-			// Auto-migrate amp model mappings when slot models change across versions
-			if (nextConfig.ampModelMappings?.length) {
-				const result = migrateAmpModelMappings(nextConfig.ampModelMappings);
-				if (result.migrated) {
-					nextConfig = {
-						...nextConfig,
-						ampModelMappings: result.mappings,
-					};
-					shouldSave = true;
-				}
-			}
+      // Auto-migrate amp model mappings when slot models change across versions
+      if (nextConfig.ampModelMappings?.length) {
+        const result = migrateAmpModelMappings(nextConfig.ampModelMappings);
+        if (result.migrated) {
+          nextConfig = {
+            ...nextConfig,
+            ampModelMappings: result.mappings,
+          };
+          shouldSave = true;
+        }
+      }
 
-			setConfig(nextConfig);
-			if (shouldSave) {
-				await saveConfig(nextConfig);
-			}
+      setConfig(nextConfig);
+      if (shouldSave) {
+        await saveConfig(nextConfig);
+      }
 
-			// Refresh auth status from CLIProxyAPI's auth directory
-			try {
-				const authState = await refreshAuthStatus();
-				setAuthStatus(authState);
-			} catch {
-				// Fall back to saved auth status
-				const authState = await getAuthStatus();
-				setAuthStatus(authState);
-			}
+      // Refresh auth status from CLIProxyAPI's auth directory
+      try {
+        const authState = await refreshAuthStatus();
+        setAuthStatus(authState);
+      } catch {
+        // Fall back to saved auth status
+        const authState = await getAuthStatus();
+        setAuthStatus(authState);
+      }
 
-			// Setup event listeners
-			const unlistenProxy = await onProxyStatusChanged((status) => {
-				updateProxyStatus(status);
-			});
+      // Setup event listeners
+      const unlistenProxy = await onProxyStatusChanged((status) => {
+        updateProxyStatus(status);
+      });
 
-			const unlistenAuth = await onAuthStatusChanged((status) => {
-				setAuthStatus(status);
-			});
+      const unlistenAuth = await onAuthStatusChanged((status) => {
+        setAuthStatus(status);
+      });
 
-			const unlistenOAuth = await onOAuthCallback(
-				async (data: OAuthCallback) => {
-					// Complete the OAuth flow
-					try {
-						const newAuthStatus = await completeOAuth(data.provider, data.code);
-						setAuthStatus(newAuthStatus);
-						// Navigate to dashboard after successful auth
-						setCurrentPage("dashboard");
-					} catch (error) {
-						console.error("Failed to complete OAuth:", error);
-					}
-				},
-			);
+      const unlistenOAuth = await onOAuthCallback(async (data: OAuthCallback) => {
+        // Complete the OAuth flow
+        try {
+          const newAuthStatus = await completeOAuth(data.provider, data.code);
+          setAuthStatus(newAuthStatus);
+          // Navigate to dashboard after successful auth
+          setCurrentPage("dashboard");
+        } catch (error) {
+          console.error("Failed to complete OAuth:", error);
+        }
+      });
 
-			const unlistenTray = await onTrayToggleProxy(async (shouldStart) => {
-				try {
-					if (shouldStart) {
-						const status = await startProxy();
-						updateProxyStatus(status, true); // Show notification
-					} else {
-						const status = await stopProxy();
-						updateProxyStatus(status, true); // Show notification
-					}
-				} catch (error) {
-					console.error("Failed to toggle proxy:", error);
-				}
-			});
+      const unlistenTray = await onTrayToggleProxy(async (shouldStart) => {
+        try {
+          if (shouldStart) {
+            const status = await startProxy();
+            updateProxyStatus(status, true); // Show notification
+          } else {
+            const status = await stopProxy();
+            updateProxyStatus(status, true); // Show notification
+          }
+        } catch (error) {
+          console.error("Failed to toggle proxy:", error);
+        }
+      });
 
-			const unlistenSsh = await onSshStatusChanged((status) => {
-				setSshStatus((prev) => ({ ...prev, [status.id]: status }));
-			});
+      const unlistenSsh = await onSshStatusChanged((status) => {
+        setSshStatus((prev) => ({ ...prev, [status.id]: status }));
+      });
 
-			const unlistenCf = await onCloudflareStatusChanged((status) => {
-				setCloudflareStatus((prev) => ({ ...prev, [status.id]: status }));
-			});
+      const unlistenCf = await onCloudflareStatusChanged((status) => {
+        setCloudflareStatus((prev) => ({ ...prev, [status.id]: status }));
+      });
 
-			onCleanup(() => {
-				unlistenSsh();
-				unlistenCf();
-			});
+      onCleanup(() => {
+        unlistenSsh();
+        unlistenCf();
+      });
 
-			// Auto-start proxy if configured
-			if (nextConfig.autoStart) {
-				try {
-					const status = await startProxy();
-					updateProxyStatus(status);
-				} catch (error) {
-					console.error("Failed to auto-start proxy:", error);
-				}
-			}
+      // Auto-start proxy if configured
+      if (nextConfig.autoStart) {
+        try {
+          const status = await startProxy();
+          updateProxyStatus(status);
+        } catch (error) {
+          console.error("Failed to auto-start proxy:", error);
+        }
+      }
 
-			// Sync usage data from CLIProxyAPI on startup
-			try {
-				await syncUsageFromProxy();
-			} catch (error) {
-				console.error("Failed to sync usage on startup:", error);
-			}
+      // Sync usage data from CLIProxyAPI on startup
+      try {
+        await syncUsageFromProxy();
+      } catch (error) {
+        console.error("Failed to sync usage on startup:", error);
+      }
 
-			setIsInitialized(true);
+      setIsInitialized(true);
 
-			// Cleanup on unmount
-			onCleanup(() => {
-				unlistenProxy();
-				unlistenAuth();
-				unlistenOAuth();
-				unlistenTray();
-				unlistenSsh();
-			});
-		} catch (error) {
-			console.error("Failed to initialize app:", error);
-		} finally {
-			setIsLoading(false);
-		}
-	};
+      // Cleanup on unmount
+      onCleanup(() => {
+        unlistenProxy();
+        unlistenAuth();
+        unlistenOAuth();
+        unlistenTray();
+        unlistenSsh();
+      });
+    } catch (error) {
+      console.error("Failed to initialize app:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-	const setLocale = (locale: string) => {
-		const normalized = normalizeLocale(locale);
-		const newConfig = { ...config(), locale: normalized };
-		setConfig(newConfig);
-		void saveConfig(newConfig).catch((error) => {
-			console.error("Failed to save locale:", error);
-		});
-	};
+  const setLocale = (locale: string) => {
+    const normalized = normalizeLocale(locale);
+    const newConfig = { ...config(), locale: normalized };
+    setConfig(newConfig);
+    void saveConfig(newConfig).catch((error) => {
+      console.error("Failed to save locale:", error);
+    });
+  };
 
-	return {
-		// Proxy
-		proxyStatus,
-		setProxyStatus: updateProxyStatus,
-		proxyStartTime,
+  return {
+    // Proxy
+    proxyStartTime,
+    proxyStatus,
+    setProxyStatus: updateProxyStatus,
 
-		// Auth
-		authStatus,
-		setAuthStatus,
+    // Auth
+    authStatus,
+    setAuthStatus,
 
-		// Config
-		config,
-		setConfig,
-		setLocale,
+    // Config
+    config,
+    setConfig,
+    setLocale,
 
-		// SSH
-		sshStatus,
-		cloudflareStatus,
+    // SSH
+    cloudflareStatus,
+    sshStatus,
 
-		// UI
-		currentPage,
-		setCurrentPage,
-		settingsTab,
-		setSettingsTab,
-		isLoading,
-		setIsLoading,
-		isInitialized,
-		sidebarExpanded,
-		setSidebarExpanded,
+    // UI
+    currentPage,
+    isInitialized,
+    isLoading,
+    setCurrentPage,
+    setIsLoading,
+    setSettingsTab,
+    setSidebarExpanded,
+    settingsTab,
+    sidebarExpanded,
 
-		// Actions
-		initialize,
-	};
+    // Actions
+    initialize,
+  };
 }
 
 export const appStore = createRoot(createAppStore);

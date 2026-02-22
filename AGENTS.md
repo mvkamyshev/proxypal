@@ -30,6 +30,8 @@ src-tauri/src/              # Rust backend
 ```bash
 pnpm tauri dev              # Dev (frontend + backend)
 pnpm tsc --noEmit           # Type check (frontend)
+pnpm check:ts               # Fast type check (uses tsgo when available, falls back to tsc)
+pnpm check:parallel         # Parallel: type check + lint + format
 cd src-tauri && cargo check # Type check (backend)
 pnpm test                   # Vitest (10 tests, 3 files)
 pnpm build                  # Vite build (frontend only)
