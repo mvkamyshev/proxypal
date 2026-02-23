@@ -878,7 +878,15 @@ fn configure_opencode_agent(
         let is_multimodal = m.id.starts_with("gemini-claude-")
             || m.id.starts_with("gemini-2.5-")
             || (m.id.starts_with("gemini-3-") && !m.id.contains("image"))
-            || (m.id.starts_with("gemini-3.1-") && !m.id.contains("image"));
+            || (m.id.starts_with("gemini-3.1-") && !m.id.contains("image"))
+            || m.id.starts_with("gpt-4o")
+            || m.id.starts_with("gpt-4.1")
+            || m.id.starts_with("gpt-5")
+            || m.id.starts_with("o1")
+            || m.id.starts_with("o3")
+            || m.id.starts_with("o4")
+            || m.id.starts_with("claude-")
+            || m.id.starts_with("copilot-gpt-4");
 
         let mut model_config = serde_json::json!({
             "name": display_name,
