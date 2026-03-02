@@ -15,6 +15,7 @@ import {
 import { DeviceCodeModal } from "../components/DeviceCodeModal";
 import { OAuthModal } from "../components/OAuthModal";
 import { OpenCodeKitBanner } from "../components/OpenCodeKitBanner";
+import { PikaAiBanner } from "../components/PikaAiBanner";
 import { StatusIndicator } from "../components/StatusIndicator";
 import { Button } from "../components/ui";
 import { useI18n } from "../i18n";
@@ -666,6 +667,9 @@ export function DashboardPage() {
         <div class="mx-auto max-w-3xl space-y-4">
           {/* === OpenCodeKit Banner === */}
           <OpenCodeKitBanner />
+
+          {/* === PikaAI Banner === */}
+          <PikaAiBanner />
 
           {/* === ZONE 1: Onboarding (shows until setup complete) === */}
           <OnboardingChecklist
