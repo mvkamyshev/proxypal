@@ -35,6 +35,7 @@ pub async fn get_available_models(state: State<'_, AppState>) -> Result<Vec<Avai
     let has_vertex = auth_status.vertex > 0;
     let has_gemini_api = !config.gemini_api_keys.is_empty();
     let has_copilot = config.copilot.enabled;
+    let has_openai = auth_status.openai > 0;
     
     let client = reqwest::Client::builder()
         .no_proxy()
@@ -95,14 +96,21 @@ pub async fn get_available_models(state: State<'_, AppState>) -> Result<Vec<Avai
                     }
                 },
                 "openai" => {
-                    if has_copilot {
-                        "copilot".to_string()
-                    } else if !config.codex_api_keys.is_empty() {
+                    // Priority: API key > OpenAI OAuth > Copilot fallback
+                    // Copilot models already have owned_by "github-copilot",
+                    // so owned_by "openai" means direct OpenAI access
+                    if !config.codex_api_keys.is_empty() {
                         "api-key".to_string()
+                    } else if has_openai {
+                        "oauth".to_string()
+                    } else if has_copilot {
+                        "copilot".to_string() // Fallback: routed through Copilot
                     } else {
                         "oauth".to_string()
                     }
                 },
+                // GitHub Copilot models (owned_by from CLIProxyAPI)
+                "github-copilot" | "copilot" => "copilot".to_string(),
                 owner => owner.to_string(),
             };
             
@@ -531,7 +539,7 @@ pub(crate) fn get_model_display_name(model_id: &str, owned_by: &str, source: &st
     
     // Add provider prefix for clarity
     let name = match owned_by {
-        "copilot" => format!("Copilot {}", base_name),
+        "copilot" | "github-copilot" => format!("Copilot {}", base_name),
         "anthropic" => format!("{}", base_name),
         "google" => format!("{}", base_name),
         "openai" => format!("{}", base_name),
