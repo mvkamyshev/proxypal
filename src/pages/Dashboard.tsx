@@ -443,6 +443,12 @@ export function DashboardPage() {
       const maxAttempts = 120;
       const pollInterval = setInterval(async () => {
         attempts++;
+        // Guard: if deep-link callback already handled this, stop polling
+        if (!oauthModalProvider()) {
+          clearInterval(pollInterval);
+          clearTimeout(manualInputTimer);
+          return;
+        }
         try {
           const completed = await pollOAuthStatus(urlData.state);
           if (completed) {

@@ -19,6 +19,7 @@ const getProviderDisplayName = (ownedBy: string): string => {
   const names: Record<string, string> = {
     anthropic: "Anthropic",
     antigravity: "Antigravity",
+    copilot: "GitHub Copilot",
     "github-copilot": "GitHub Copilot",
     google: "Google",
     iflow: "iFlow",
@@ -34,6 +35,7 @@ const getProviderColor = (ownedBy: string): string => {
   const colors: Record<string, string> = {
     anthropic: "bg-orange-500",
     antigravity: "bg-indigo-500",
+    copilot: "bg-purple-500",
     "github-copilot": "bg-purple-500",
     google: "bg-blue-500",
     iflow: "bg-pink-500",
