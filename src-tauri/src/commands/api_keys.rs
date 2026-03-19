@@ -316,6 +316,13 @@ pub async fn set_vertex_api_keys(state: State<'_, AppState>, keys: Vec<VertexApi
         return Err(format!("Failed to set Vertex API keys: {} - {}", status, text));
     }
     
+    // Persist to ProxyPal config for restart persistence
+    {
+        let mut config = state.config.lock().unwrap();
+        config.vertex_api_keys = keys;
+        save_config_to_file(&config)?;
+    }
+    
     Ok(())
 }
 
