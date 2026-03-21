@@ -1,14 +1,12 @@
 import { createRoot, createSignal, onCleanup } from "solid-js";
 import { detectSystemLocale, normalizeLocale, resolveInitialLocale } from "../i18n/locale";
 import {
-  completeOAuth,
   getAuthStatus,
   getConfig,
   getProxyStatus,
   migrateAmpModelMappings,
   onAuthStatusChanged,
   onCloudflareStatusChanged,
-  onOAuthCallback,
   onProxyStatusChanged,
   onSshStatusChanged,
   onTrayToggleProxy,
@@ -24,7 +22,6 @@ import type {
   AppConfig,
   AuthStatus,
   CloudflareStatusUpdate,
-  OAuthCallback,
   ProxyStatus,
   SshStatusUpdate,
 } from "../lib/tauri";
@@ -179,18 +176,6 @@ function createAppStore() {
         setAuthStatus(status);
       });
 
-      const unlistenOAuth = await onOAuthCallback(async (data: OAuthCallback) => {
-        // Complete the OAuth flow
-        try {
-          const newAuthStatus = await completeOAuth(data.provider, data.code);
-          setAuthStatus(newAuthStatus);
-          // Navigate to dashboard after successful auth
-          setCurrentPage("dashboard");
-        } catch (error) {
-          console.error("Failed to complete OAuth:", error);
-        }
-      });
-
       const unlistenTray = await onTrayToggleProxy(async (shouldStart) => {
         try {
           if (shouldStart) {
@@ -241,7 +226,6 @@ function createAppStore() {
       onCleanup(() => {
         unlistenProxy();
         unlistenAuth();
-        unlistenOAuth();
         unlistenTray();
         unlistenSsh();
       });

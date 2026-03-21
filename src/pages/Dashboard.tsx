@@ -169,6 +169,9 @@ export function DashboardPage() {
   const [oauthUrlData, setOauthUrlData] = createSignal<OAuthUrlResponse | null>(null);
   const [oauthLoading, setOauthLoading] = createSignal(false);
   const [showManualCodeInput, setShowManualCodeInput] = createSignal(false);
+  // Guard: prevents race between deep-link callback, polling, and manual code submission.
+  // First completion path to set this wins; others bail out.
+  const [oauthCompleted, setOauthCompleted] = createSignal(false);
 
   // Device Code Modal state
   const [deviceCodeProvider, setDeviceCodeProvider] = createSignal<Provider | null>(null);
@@ -257,31 +260,32 @@ export function DashboardPage() {
     // Listen for deep-link OAuth callback (faster than polling)
     const unlistenOAuth = await onOAuthCallback(async (data) => {
       const provider = oauthModalProvider();
-      if (provider && data.provider === provider) {
-        try {
-          const newAuth = await completeOAuth(data.provider, data.code);
-          setAuthStatus(newAuth);
-          setOauthLoading(false);
-          setOauthModalProvider(null);
-          setOauthUrlData(null);
-          setShowManualCodeInput(false);
-          setRecentlyConnected((prev) => new Set([...prev, provider]));
-          setTimeout(() => {
-            setRecentlyConnected((prev) => {
-              const next = new Set(prev);
-              next.delete(provider);
-              return next;
-            });
-          }, 2000);
-          toastStore.success(
-            t("dashboard.toasts.providerConnected", {
-              provider: getProviderName(provider),
-            }),
-            t("dashboard.toasts.youCanNowUseThisProvider"),
-          );
-        } catch (error) {
-          console.error("OAuth callback completion failed:", error);
-        }
+      if (!provider || data.provider !== provider || oauthCompleted()) return;
+      setOauthCompleted(true);
+      try {
+        const newAuth = await completeOAuth(data.provider, data.code);
+        setAuthStatus(newAuth);
+        setOauthLoading(false);
+        setOauthModalProvider(null);
+        setOauthUrlData(null);
+        setShowManualCodeInput(false);
+        setRecentlyConnected((prev) => new Set([...prev, provider]));
+        setTimeout(() => {
+          setRecentlyConnected((prev) => {
+            const next = new Set(prev);
+            next.delete(provider);
+            return next;
+          });
+        }, 2000);
+        toastStore.success(
+          t("dashboard.toasts.providerConnected", {
+            provider: getProviderName(provider),
+          }),
+          t("dashboard.toasts.youCanNowUseThisProvider"),
+        );
+      } catch (error) {
+        console.error("OAuth callback completion failed:", error);
+        setOauthCompleted(false); // Allow retry via other paths
       }
     });
 
@@ -422,6 +426,7 @@ export function DashboardPage() {
 
     setOauthLoading(true);
     setShowManualCodeInput(false);
+    setOauthCompleted(false);
 
     try {
       // Open the browser with the OAuth URL
@@ -443,8 +448,8 @@ export function DashboardPage() {
       const maxAttempts = 120;
       const pollInterval = setInterval(async () => {
         attempts++;
-        // Guard: if deep-link callback already handled this, stop polling
-        if (!oauthModalProvider()) {
+        // Guard: if another path already completed this OAuth, stop polling
+        if (!oauthModalProvider() || oauthCompleted()) {
           clearInterval(pollInterval);
           clearTimeout(manualInputTimer);
           return;
@@ -454,6 +459,9 @@ export function DashboardPage() {
           if (completed) {
             clearInterval(pollInterval);
             clearTimeout(manualInputTimer);
+            // Race guard: bail if another path (deep-link/manual) already handled this
+            if (oauthCompleted()) return;
+            setOauthCompleted(true);
             // Add delay to ensure file is written before scanning
             await new Promise((resolve) => setTimeout(resolve, 500));
 
@@ -514,7 +522,7 @@ export function DashboardPage() {
   const handleAlreadyAuthorized = async () => {
     const provider = oauthModalProvider();
     const urlData = oauthUrlData();
-    if (!provider || !urlData) {
+    if (!provider || !urlData || oauthCompleted()) {
       return;
     }
 
@@ -524,6 +532,13 @@ export function DashboardPage() {
     try {
       const completed = await pollOAuthStatus(urlData.state);
       if (completed) {
+        // Race guard: bail if another path already handled this
+        if (oauthCompleted()) {
+          setOauthLoading(false);
+          return;
+        }
+        setOauthCompleted(true);
+
         // Add delay to ensure file is written before scanning
         await new Promise((resolve) => setTimeout(resolve, 500));
 
@@ -577,11 +592,13 @@ export function DashboardPage() {
     setOauthUrlData(null);
     setOauthLoading(false);
     setShowManualCodeInput(false);
+    setOauthCompleted(false);
   };
 
   const handleSubmitCode = async (code: string) => {
     const provider = oauthModalProvider();
-    if (!provider) return;
+    if (!provider || oauthCompleted()) return;
+    setOauthCompleted(true);
 
     setOauthLoading(true);
     try {
@@ -608,6 +625,7 @@ export function DashboardPage() {
     } catch (error) {
       console.error("Manual code submission failed:", error);
       setOauthLoading(false);
+      setOauthCompleted(false); // Allow retry
       toastStore.error(t("dashboard.toasts.connectionFailed"), String(error));
       throw error; // Re-throw so OAuthModal can reset its submitting state
     }
