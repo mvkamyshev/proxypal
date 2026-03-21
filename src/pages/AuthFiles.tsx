@@ -149,11 +149,11 @@ export function AuthFilesPage() {
     } else if (p.includes("codex")) {
       modelId = "gpt-5.1-codex-mini";
     } else if (p.includes("qwen")) {
-      modelId = "glm-4.5";
+      modelId = "qwen3-coder-plus";
     } else if (p.includes("deepseek")) {
       modelId = "deepseek-chat";
     } else if (p.includes("iflow")) {
-      modelId = "qwen3-coder-plus";
+      modelId = "glm-4.5";
     } else if (p.includes("antigravity")) {
       modelId = "gemini-2.5-flash";
     } else if (p.includes("kimi")) {
