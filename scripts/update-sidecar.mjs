@@ -87,9 +87,10 @@ function getAssetInfo(target, version) {
   return map[target] || null;
 }
 
-function findBinary(dir) {
+function findBinary(dir, { includeExe = false } = {}) {
   const names = ["cli-proxy-api-plus", "CLIProxyAPIPlus", "CLIProxyAPI", "cli-proxy-api"];
-  if (process.platform === "win32") {
+  // Add .exe variants when on Windows OR when cross-downloading Windows targets
+  if (process.platform === "win32" || includeExe) {
     names.push(...names.map((n) => n + ".exe"));
   }
 
@@ -99,7 +100,7 @@ function findBinary(dir) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const fullPath = join(dir, entry.name);
     if (entry.isDirectory()) {
-      const found = findBinary(fullPath);
+      const found = findBinary(fullPath, { includeExe });
       if (found) return found;
     }
     // Skip archive files
@@ -148,8 +149,9 @@ async function downloadTarget(target, version) {
       });
     }
 
-    // Find and copy binary
-    const binaryPath = findBinary(tempDir);
+    // Find and copy binary (pass includeExe for Windows targets cross-downloaded from other OS)
+    const isWindowsTarget = target.endsWith(".exe");
+    const binaryPath = findBinary(tempDir, { includeExe: isWindowsTarget });
     if (!binaryPath) throw new Error("Binary not found in archive");
 
     const destPath = join(BINARIES_DIR, target);
