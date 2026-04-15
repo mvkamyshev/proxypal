@@ -59,6 +59,63 @@ pnpm install
 pnpm tauri dev
 ```
 
+### Build on Linux
+
+Install system packages first.
+
+For Debian/Ubuntu:
+
+```bash
+sudo apt update
+sudo apt install libwebkit2gtk-4.1-dev \
+  build-essential \
+  curl \
+  wget \
+  file \
+  libxdo-dev \
+  libssl-dev \
+  libayatana-appindicator3-dev \
+  librsvg2-dev
+```
+
+Install toolchains:
+
+```bash
+curl https://sh.rustup.rs -sSf | sh
+corepack enable
+pnpm install
+```
+
+Build the desktop app:
+
+```bash
+pnpm tauri build
+```
+
+Linux bundles are written to:
+
+```bash
+src-tauri/target/release/bundle/
+```
+
+Available targets in this repo configuration include `.deb`, `.rpm`, and `.AppImage`.
+
+### Linux Compatibility
+
+Linux is not "100% the same as macOS" by default.
+
+Tauri uses a different runtime stack on Linux, packaging differs, deep-link registration differs, tray behavior can differ by desktop environment, and updater/install flows need verification on a real Linux machine.
+
+Treat Linux support as supported only after verifying at least:
+
+1. App launch
+2. Proxy start/stop
+3. OAuth or auth-file login flow
+4. Deep links
+5. Tray/menu behavior
+6. Auto-update or package install flow
+7. Sidecar binary launch (`cli-proxy-api`)
+
 ### Checks
 
 ```bash
