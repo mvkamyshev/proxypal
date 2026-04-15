@@ -27,6 +27,7 @@ export interface CodexQuotaResult {
   fetchedAt: string;
   hasCredits: boolean;
   isActive: boolean;
+  lastRoutedAt?: string;
   lastRefresh?: string;
   lastWarmupAt?: string;
   planType: string;

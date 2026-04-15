@@ -154,7 +154,7 @@ export function AuthFilesPage() {
     const providerTestModels: Record<string, string> = {
       antigravity: "gemini-2.5-flash",
       claude: "claude-sonnet-4-5",
-      codex: "gpt-5.1-codex-mini",
+      codex: "gpt-5.4-mini",
       deepseek: "deepseek-chat",
       gemini: "gemini-2.5-flash",
       iflow: "glm-4.5",

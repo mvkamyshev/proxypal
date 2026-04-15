@@ -49,6 +49,7 @@ pub struct CodexQuotaResult {
     pub auth_file_name: String,
     pub disabled: bool,
     pub is_active: bool,
+    pub last_routed_at: Option<String>,
     /// Plan type: "free", "plus", "pro", "team", etc.
     pub plan_type: String,
     pub last_refresh: Option<String>,

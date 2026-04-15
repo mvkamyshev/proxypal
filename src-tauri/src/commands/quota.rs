@@ -1,10 +1,11 @@
 //! Quota management - fetch quota/usage for all providers.
 
 use base64::Engine;
+use std::io::{BufRead, BufReader};
 use tauri::{Emitter, State};
-use crate::helpers::warmup::load_codex_warm_report;
+use crate::helpers::warmup::{atomic_write_json, load_codex_warm_report, refresh_tokens};
 use crate::state::AppState;
-use crate::types::{AuthStatus, ProviderTestResult};
+use crate::types::{AuthFile, AuthStatus, ProviderTestResult};
 
 // Helper function to refresh Antigravity OAuth token
 async fn refresh_antigravity_token(client: &reqwest::Client, refresh_token: &str) -> Result<String, String> {
@@ -355,18 +356,18 @@ async fn fetch_with_retry(
     Err(format!("All {} attempts failed, last error: {}", max_retries + 1, last_err))
 }
 
+fn is_nonfatal_chatgpt_model_warm_error(error: &str) -> bool {
+    error
+        .to_ascii_lowercase()
+        .contains("model is not supported when using codex with a chatgpt account")
+}
+
 // Fetch Codex/ChatGPT quota and usage for all authenticated accounts
 // Uses the ChatGPT internal API: https://chatgpt.com/backend-api/wham/usage
 #[tauri::command]
 pub async fn fetch_codex_quota(state: State<'_, AppState>) -> Result<Vec<crate::types::CodexQuotaResult>, String> {
     let home = dirs::home_dir().ok_or("Could not determine home directory")?;
     let auth_dir = home.join(".cli-proxy-api");
-    let request_logs_dir = home
-        .join("Library")
-        .join("Application Support")
-        .join("proxypal")
-        .join("logs");
-    
     if !auth_dir.exists() {
         return Ok(vec![]);
     }
@@ -388,12 +389,19 @@ pub async fn fetch_codex_quota(state: State<'_, AppState>) -> Result<Vec<crate::
             })
             .collect::<std::collections::HashMap<_, _>>()
     });
-    let active_auth = state
-        .current_codex_auth
-        .lock()
-        .unwrap()
-        .clone()
-        .or_else(|| read_active_codex_auth_from_logs(&request_logs_dir));
+    let port = {
+        let config = state.config.lock().unwrap();
+        config.port
+    };
+    let auth_file_lookup = fetch_auth_files_lookup(port).await;
+    let last_routed = find_last_codex_routed_auth()
+        .or_else(|| state.current_codex_auth.lock().unwrap().clone().map(|auth| (auth, chrono::Local::now().to_rfc3339())));
+    let active_auth = last_routed.as_ref().map(|(auth, _)| auth.clone());
+    let last_routed_at = last_routed.as_ref().map(|(_, at)| at.clone());
+    let refresh_client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(15))
+        .build()
+        .unwrap_or_default();
     
     // Find all codex-*.json files
     let entries = std::fs::read_dir(&auth_dir)
@@ -407,6 +415,7 @@ pub async fn fetch_codex_quota(state: State<'_, AppState>) -> Result<Vec<crate::
         account_id: Option<String>,
         disabled: bool,
         last_refresh: Option<String>,
+        last_routed_at: Option<String>,
         access_token_expires_at: Option<String>,
         subscription_active_start: Option<String>,
         subscription_active_until: Option<String>,
@@ -437,15 +446,46 @@ pub async fn fetch_codex_quota(state: State<'_, AppState>) -> Result<Vec<crate::
                 }
             };
             
-            let cred: serde_json::Value = match serde_json::from_str(&content) {
+            let mut cred: serde_json::Value = match serde_json::from_str(&content) {
                 Ok(v) => v,
                 Err(e) => {
                     eprintln!("Failed to parse codex credential file: {}", e);
                     continue;
                 }
             };
+
+            // Refresh Codex auth on every quota check so id_token-backed subscription dates
+            // and access token metadata stay current after reauth.
+            if let Err(error) = refresh_tokens(&refresh_client, &mut cred).await {
+                eprintln!("Failed to refresh codex credential file {}: {}", filename, error);
+            } else if let Err(error) = atomic_write_json(&file_path, &cred) {
+                eprintln!("Failed to persist refreshed codex credential file {}: {}", filename, error);
+            }
             
-            let email = cred["email"].as_str().unwrap_or("unknown").to_string();
+            let normalized_filename = filename
+                .strip_suffix(".disabled")
+                .unwrap_or(filename.as_str())
+                .to_string();
+            let auth_file = auth_file_lookup
+                .iter()
+                .find(|file| file.name == normalized_filename || file.id == normalized_filename);
+            let file_id = auth_file.map(|file| file.id.as_str());
+            let file_email = auth_file.and_then(|file| file.email.as_deref());
+            let stem = normalized_filename.strip_suffix(".json").unwrap_or(normalized_filename.as_str());
+            let email = cred["email"]
+                .as_str()
+                .or(file_email)
+                .unwrap_or("unknown")
+                .to_string();
+            let is_active = active_auth
+                .as_deref()
+                .map(|active| {
+                    active == filename
+                        || active == normalized_filename
+                        || active == stem
+                        || file_id == Some(active)
+                })
+                .unwrap_or(false);
             let disabled = filename.ends_with(".disabled");
             let last_refresh = cred["last_refresh"].as_str().map(|s| s.to_string());
             let access_token_expires_at = cred["expired"].as_str().map(|s| s.to_string());
@@ -470,7 +510,12 @@ pub async fn fetch_codex_quota(state: State<'_, AppState>) -> Result<Vec<crate::
                 .map(|s| s.to_string());
 
             let warm_status = warm_info.as_ref().map(|info| {
-                if info.error.is_some() {
+                let has_fatal_warm_error = info
+                    .error
+                    .as_deref()
+                    .map(|err| !is_nonfatal_chatgpt_model_warm_error(err))
+                    .unwrap_or(false);
+                if has_fatal_warm_error {
                     "failed".to_string()
                 } else if info.warmed {
                     "warmed".to_string()
@@ -480,7 +525,12 @@ pub async fn fetch_codex_quota(state: State<'_, AppState>) -> Result<Vec<crate::
                     "skipped".to_string()
                 }
             });
-            let warm_error = warm_info.as_ref().and_then(|info| info.error.clone());
+            let warm_error = warm_info.as_ref().and_then(|info| {
+                info.error
+                    .as_deref()
+                    .filter(|err| !is_nonfatal_chatgpt_model_warm_error(err))
+                    .map(|err| err.to_string())
+            });
             let last_warmup_at = warm_info.as_ref().map(|info| info.generated_at.clone());
 
             match cred["access_token"].as_str() {
@@ -491,6 +541,7 @@ pub async fn fetch_codex_quota(state: State<'_, AppState>) -> Result<Vec<crate::
                         access_token: t.to_string(),
                         account_id: cred["account_id"].as_str().map(|s| s.to_string()),
                         disabled,
+                        last_routed_at: if is_active { last_routed_at.clone() } else { None },
                         last_refresh,
                         access_token_expires_at,
                         subscription_active_start,
@@ -499,7 +550,7 @@ pub async fn fetch_codex_quota(state: State<'_, AppState>) -> Result<Vec<crate::
                         warm_status,
                         warm_error,
                         last_warmup_at,
-                        is_active: active_auth.as_deref() == Some(filename.as_str()),
+                        is_active,
                     });
                 }
                 None => {
@@ -507,7 +558,8 @@ pub async fn fetch_codex_quota(state: State<'_, AppState>) -> Result<Vec<crate::
                         account_email: email,
                         auth_file_name: filename.clone(),
                         disabled,
-                        is_active: active_auth.as_deref() == Some(filename.as_str()),
+                        is_active,
+                        last_routed_at: if is_active { last_routed_at.clone() } else { None },
                         plan_type: "unknown".to_string(),
                         last_refresh,
                         access_token_expires_at,
@@ -583,6 +635,7 @@ pub async fn fetch_codex_quota(state: State<'_, AppState>) -> Result<Vec<crate::
                             auth_file_name: cred.auth_file_name,
                             disabled: cred.disabled,
                             is_active: cred.is_active,
+                            last_routed_at: cred.last_routed_at,
                             plan_type,
                             last_refresh: cred.last_refresh,
                             access_token_expires_at: cred.access_token_expires_at,
@@ -610,6 +663,7 @@ pub async fn fetch_codex_quota(state: State<'_, AppState>) -> Result<Vec<crate::
                             auth_file_name: cred.auth_file_name,
                             disabled: cred.disabled,
                             is_active: cred.is_active,
+                            last_routed_at: cred.last_routed_at,
                             plan_type: "unknown".to_string(),
                             last_refresh: cred.last_refresh,
                             access_token_expires_at: cred.access_token_expires_at,
@@ -637,6 +691,7 @@ pub async fn fetch_codex_quota(state: State<'_, AppState>) -> Result<Vec<crate::
                         auth_file_name: cred.auth_file_name,
                         disabled: cred.disabled,
                         is_active: cred.is_active,
+                        last_routed_at: cred.last_routed_at,
                         plan_type: "unknown".to_string(),
                         last_refresh: cred.last_refresh,
                         access_token_expires_at: cred.access_token_expires_at,
@@ -673,12 +728,123 @@ pub async fn fetch_codex_quota(state: State<'_, AppState>) -> Result<Vec<crate::
     Ok(results)
 }
 
+fn find_last_codex_routed_auth() -> Option<(String, String)> {
+    let log_dir = dirs::home_dir()?.join("Library/Application Support/proxypal/logs");
+    let entries = std::fs::read_dir(log_dir).ok()?;
+    let auth_regex = regex::Regex::new(r"Auth:\s+provider=codex,\s+auth_id=([^,]+),").ok()?;
+    let ts_regex = regex::Regex::new(r"(\d{4}-\d{2}-\d{2}T\d{6})").ok()?;
+    let mut files: Vec<(String, std::path::PathBuf)> = entries
+        .flatten()
+        .filter_map(|entry| {
+            let path = entry.path();
+            let name = path.file_name()?.to_string_lossy().to_string();
+            if !name.ends_with(".log") {
+                return None;
+            }
+            let ts = ts_regex
+                .captures(&name)
+                .and_then(|caps| caps.get(1))
+                .map(|m| m.as_str().to_string())?;
+            Some((ts, path))
+        })
+        .collect();
+    files.sort_by(|a, b| b.0.cmp(&a.0));
+
+    for (ts, path) in files {
+        let file = match std::fs::File::open(path) {
+            Ok(file) => file,
+            Err(_) => continue,
+        };
+        let reader = BufReader::new(file);
+        let mut block_auth_id: Option<String> = None;
+        let mut last_matching_auth_id: Option<String> = None;
+        for line in reader.lines().map_while(Result::ok) {
+            if line.starts_with("URL: ") {
+                block_auth_id = None;
+                continue;
+            }
+            if let Some(auth_id) = auth_regex
+                .captures(&line)
+                .and_then(|captures| captures.get(1))
+                .map(|m| m.as_str().to_string())
+            {
+                block_auth_id = Some(auth_id);
+                continue;
+            }
+            if let Some(user_agent) = line.strip_prefix("User-Agent: ") {
+                let is_codex_client = user_agent.contains("Codex Desktop/")
+                    || user_agent.contains("codex-tui/")
+                    || user_agent.contains("OpenAI Codex/");
+                if is_codex_client {
+                    if let Some(auth_id) = block_auth_id.clone() {
+                        last_matching_auth_id = Some(auth_id);
+                    }
+                }
+            }
+        }
+        if let Some(auth_id) = last_matching_auth_id {
+            let routed_at = chrono::NaiveDateTime::parse_from_str(&ts, "%Y-%m-%dT%H%M%S")
+                .ok()
+                .and_then(|naive| naive.and_local_timezone(chrono::Local).single())
+                .map(|dt| dt.to_rfc3339())
+                .unwrap_or(ts);
+            return Some((auth_id, routed_at));
+        }
+    }
+
+    None
+}
+
 #[derive(Debug, Clone)]
 struct CodexWarmReportEntryWithGeneratedAt {
     generated_at: String,
     refreshed: bool,
     warmed: bool,
     error: Option<String>,
+}
+
+async fn fetch_auth_files_lookup(port: u16) -> Vec<AuthFile> {
+    let client = crate::build_management_client();
+    let url = crate::get_management_url(port, "auth-files");
+    let response = match client
+        .get(&url)
+        .header("X-Management-Key", &crate::get_management_key())
+        .send()
+        .await
+    {
+        Ok(response) if response.status().is_success() => response,
+        _ => return Vec::new(),
+    };
+
+    let json = match response.json::<serde_json::Value>().await {
+        Ok(json) => json,
+        Err(_) => return Vec::new(),
+    };
+
+    let files_array = if let Some(files) = json.get("files") {
+        files.clone()
+    } else if json.is_array() {
+        json
+    } else {
+        serde_json::Value::Array(Vec::new())
+    };
+
+    let json_str = match serde_json::to_string(&files_array) {
+        Ok(json_str) => json_str,
+        Err(_) => return Vec::new(),
+    };
+
+    let converted = json_str
+        .replace("\"status_message\"", "\"statusMessage\"")
+        .replace("\"runtime_only\"", "\"runtimeOnly\"")
+        .replace("\"account_type\"", "\"accountType\"")
+        .replace("\"created_at\"", "\"createdAt\"")
+        .replace("\"updated_at\"", "\"updatedAt\"")
+        .replace("\"last_refresh\"", "\"lastRefresh\"")
+        .replace("\"success_count\"", "\"successCount\"")
+        .replace("\"failure_count\"", "\"failureCount\"");
+
+    serde_json::from_str::<Vec<AuthFile>>(&converted).unwrap_or_default()
 }
 
 fn parse_jwt_claims(token: &str) -> Option<serde_json::Value> {
@@ -688,32 +854,6 @@ fn parse_jwt_claims(token: &str) -> Option<serde_json::Value> {
         .or_else(|_| base64::engine::general_purpose::URL_SAFE.decode(payload))
         .ok()?;
     serde_json::from_slice::<serde_json::Value>(&decoded).ok()
-}
-
-fn read_active_codex_auth_from_logs(logs_dir: &std::path::Path) -> Option<String> {
-    let entries = std::fs::read_dir(logs_dir).ok()?;
-    let mut files: Vec<_> = entries
-        .flatten()
-        .filter(|entry| {
-            let name = entry.file_name().to_string_lossy().to_string();
-            name.starts_with("v1-") && name.ends_with(".log")
-        })
-        .collect();
-    files.sort_by_key(|entry| entry.metadata().and_then(|m| m.modified()).ok());
-    files.reverse();
-
-    let regex = regex::Regex::new(r"Auth:\s+provider=codex,\s+auth_id=([^,]+),").ok()?;
-    for entry in files.into_iter().take(10) {
-        let content = std::fs::read_to_string(entry.path()).ok()?;
-        let mut last_match: Option<String> = None;
-        for captures in regex.captures_iter(&content) {
-            last_match = captures.get(1).map(|m| m.as_str().to_string());
-        }
-        if last_match.is_some() {
-            return last_match;
-        }
-    }
-    None
 }
 
 // Fetch Copilot/GitHub quota for all authenticated accounts

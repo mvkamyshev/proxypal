@@ -12,6 +12,8 @@ const USAGE_URL: &str = "https://chatgpt.com/backend-api/wham/usage";
 const WARMUP_URL: &str = "https://chatgpt.com/backend-api/codex/responses";
 const CLIENT_ID: &str = "app_EMoamEEZ73f0CkXaXp7hrann";
 const CODEX_USER_AGENT: &str = "codex-cli/1.0.0";
+const UNSUPPORTED_CHATGPT_MODEL_ERROR: &str =
+    "model is not supported when using Codex with a ChatGPT account";
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
@@ -172,17 +174,25 @@ async fn run_codex_warmup_job_inner() -> Result<CodexWarmReport, String> {
         let mut quota_entry = None;
 
         if refreshed {
-            match warmup_account(&client, &mut payload).await {
+            let warmup_result = warmup_account(&client, &mut payload).await;
+            match warmup_result {
                 Ok(_) => {
                     warmed = true;
                     let _ = atomic_write_json(&path, &payload);
-                    match fetch_quota(&client, &payload).await {
-                        Ok(entry) => quota_entry = Some(entry),
-                        Err(error) => warm_error = Some(error),
-                    }
+                }
+                Err(error) if is_nonfatal_chatgpt_model_error(&error) => {
+                    // ChatGPT-bound Codex auth files can legitimately reject explicit model warmup.
+                    // In this case, token refresh + quota fetch is still a successful warm cycle.
+                    warmed = false;
                 }
                 Err(error) => {
                     warm_error = Some(error);
+                }
+            }
+            if warm_error.is_none() {
+                match fetch_quota(&client, &payload).await {
+                    Ok(entry) => quota_entry = Some(entry),
+                    Err(error) => warm_error = Some(error),
                 }
             }
         }
@@ -248,6 +258,12 @@ async fn run_codex_warmup_job_inner() -> Result<CodexWarmReport, String> {
     Ok(report)
 }
 
+fn is_nonfatal_chatgpt_model_error(error: &str) -> bool {
+    error
+        .to_ascii_lowercase()
+        .contains(UNSUPPORTED_CHATGPT_MODEL_ERROR)
+}
+
 pub fn should_run_daily_codex_warmup() -> bool {
     let config = load_config();
     if !config.codex_warmup_enabled {
@@ -280,7 +296,7 @@ fn parse_hh_mm(value: &str) -> Option<(u8, u8)> {
     Some((hour, minute))
 }
 
-fn read_auth_json(path: &Path) -> Result<serde_json::Value, String> {
+pub(crate) fn read_auth_json(path: &Path) -> Result<serde_json::Value, String> {
     let content = std::fs::read_to_string(path)
         .map_err(|e| format!("read failed: {}", e))?;
     let payload: serde_json::Value =
@@ -291,7 +307,7 @@ fn read_auth_json(path: &Path) -> Result<serde_json::Value, String> {
     Ok(payload)
 }
 
-fn atomic_write_json(path: &Path, payload: &serde_json::Value) -> Result<(), String> {
+pub(crate) fn atomic_write_json(path: &Path, payload: &serde_json::Value) -> Result<(), String> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent).map_err(|e| format!("failed to create dir: {}", e))?;
     }
@@ -313,7 +329,7 @@ fn atomic_write_json(path: &Path, payload: &serde_json::Value) -> Result<(), Str
     Ok(())
 }
 
-async fn refresh_tokens(
+pub(crate) async fn refresh_tokens(
     client: &reqwest::Client,
     payload: &mut serde_json::Value,
 ) -> Result<(), String> {

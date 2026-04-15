@@ -46,6 +46,7 @@ pub async fn get_chatgpt_web_session(file_name: String) -> Result<serde_json::Va
         .or_else(|| payload.get("sessionToken").and_then(|v| v.as_str()))
         .map(str::trim)
         .filter(|v| !v.is_empty())
+        .map(str::to_string)
         .ok_or("No session_token in auth file")?;
 
     let access_token = payload
@@ -68,7 +69,7 @@ pub async fn get_chatgpt_web_session(file_name: String) -> Result<serde_json::Va
             ),
         );
 
-    if let Some(token) = access_token {
+    if let Some(token) = access_token.as_ref() {
         request = request.header("Authorization", format!("Bearer {}", token));
     }
 

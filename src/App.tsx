@@ -7,6 +7,7 @@ import {
   AnalyticsPage,
   ApiKeysPage,
   AuthFilesPage,
+  CodexAccountsPage,
   DashboardPage,
   LogViewerPage,
   SettingsPage,
@@ -66,6 +67,9 @@ function App() {
             <Switch fallback={<DashboardPage />}>
               <Match when={currentPage() === "dashboard"}>
                 <DashboardPage />
+              </Match>
+              <Match when={currentPage() === "codex-accounts"}>
+                <CodexAccountsPage />
               </Match>
               <Match when={currentPage() === "settings"}>
                 <SettingsPage />

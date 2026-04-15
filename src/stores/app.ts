@@ -91,10 +91,10 @@ function createAppStore() {
     Record<string, CloudflareStatusUpdate>
   >({});
 
-  // UI state - Start directly on dashboard
+  // UI state - Start directly on Codex Accounts
   const [currentPage, setCurrentPage] = createSignal<
-    "dashboard" | "settings" | "api-keys" | "auth-files" | "logs" | "analytics"
-  >("dashboard");
+    "dashboard" | "codex-accounts" | "settings" | "api-keys" | "auth-files" | "logs" | "analytics"
+  >("codex-accounts");
   const [isLoading, setIsLoading] = createSignal(false);
   const [isInitialized, setIsInitialized] = createSignal(false);
   const [sidebarExpanded, setSidebarExpanded] = createSignal(false);

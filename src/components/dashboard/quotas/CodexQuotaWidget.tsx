@@ -121,6 +121,8 @@ export function CodexQuotaWidget(props: CodexQuotaWidgetProps) {
     return "bg-green-500";
   };
 
+  const normalizePlan = (planType?: string) => (planType || "unknown").trim().toUpperCase();
+
   const sortedQuotaData = createMemo(() =>
     [...quotaData()].sort((a, b) => {
       if (a.isActive !== b.isActive) {
@@ -229,7 +231,7 @@ export function CodexQuotaWidget(props: CodexQuotaWidgetProps) {
             {(account) => (
               <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-800 dark:bg-emerald-900/20">
                 <div class="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
-                  Current Active Account
+                  Current Routed Auth
                 </div>
                 <div class="mt-1 text-sm font-semibold text-emerald-900 dark:text-emerald-100">
                   {account().accountEmail}
@@ -237,13 +239,18 @@ export function CodexQuotaWidget(props: CodexQuotaWidgetProps) {
                 <div class="mt-1 text-[11px] text-emerald-700 dark:text-emerald-300">
                   {account().authFileName}
                 </div>
+                <Show when={account().lastRoutedAt}>
+                  <div class="mt-1 text-[11px] text-emerald-700 dark:text-emerald-300">
+                    Last routed: {formatDateTime(account().lastRoutedAt)}
+                  </div>
+                </Show>
               </div>
             )}
           </Show>
 
           <Show when={quotaData().length > 0 && !sortedQuotaData().some((account) => account.isActive)}>
             <div class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
-              Active account will appear after the next real Codex request goes through rotation.
+              Current routed auth will appear after the next real Codex request reaches the proxy.
             </div>
           </Show>
 
@@ -256,11 +263,11 @@ export function CodexQuotaWidget(props: CodexQuotaWidgetProps) {
                       {account.accountEmail}
                     </h4>
                     <span class="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium uppercase text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                      {account.planType}
+                      {normalizePlan(account.planType)}
                     </span>
                     <Show when={account.isActive}>
                       <span class="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium uppercase text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
-                        Active
+                        Routed now
                       </span>
                     </Show>
                     <Show when={account.disabled}>

@@ -5,7 +5,14 @@ import { appStore } from "../stores/app";
 import { themeStore } from "../stores/theme";
 import { toastStore } from "../stores/toast";
 
-type PageId = "dashboard" | "analytics" | "logs" | "api-keys" | "auth-files" | "settings";
+type PageId =
+  | "dashboard"
+  | "codex-accounts"
+  | "analytics"
+  | "logs"
+  | "api-keys"
+  | "auth-files"
+  | "settings";
 
 interface NavItem {
   icon: Component<{ class?: string }>;
@@ -48,6 +55,15 @@ const ApiKeysIcon: Component<{ class?: string }> = (props) => (
   </svg>
 );
 
+const CodexAccountsIcon: Component<{ class?: string }> = (props) => (
+  <svg class={props.class} fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+    <path d="M4 7h16" />
+    <path d="M4 12h16" />
+    <path d="M4 17h10" />
+    <path d="M18 16l2 2 4-4" />
+  </svg>
+);
+
 const AuthFilesIcon: Component<{ class?: string }> = (props) => (
   <svg class={props.class} fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
     <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -74,6 +90,7 @@ const PinIcon: Component<{ class?: string; pinned?: boolean }> = (props) => (
 
 const navItems: NavItem[] = [
   { icon: DashboardIcon, id: "dashboard" },
+  { icon: CodexAccountsIcon, id: "codex-accounts" },
   { icon: ApiKeysIcon, id: "api-keys" },
   { icon: AuthFilesIcon, id: "auth-files" },
   { icon: LogsIcon, id: "logs" },
@@ -161,6 +178,8 @@ export const Sidebar: Component = () => {
         return t("sidebar.dashboard");
       case "api-keys":
         return t("sidebar.apiKeys");
+      case "codex-accounts":
+        return "Codex Accounts";
       case "auth-files":
         return t("sidebar.authFiles");
       case "logs":
