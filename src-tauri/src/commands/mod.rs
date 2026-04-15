@@ -4,6 +4,7 @@ pub mod agents;
 pub mod api_keys;
 pub mod auth;
 pub mod auth_files;
+pub mod chatgpt_session;
 pub mod config;
 pub mod cloudflare;
 pub mod copilot;

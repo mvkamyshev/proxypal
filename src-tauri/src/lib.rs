@@ -405,6 +405,7 @@ pub fn run() {
             commands::auth::disconnect_provider,
             commands::quota::fetch_antigravity_quota,
             commands::quota::fetch_codex_quota,
+            commands::chatgpt_session::get_chatgpt_web_session,
             commands::quota::fetch_copilot_quota,
             commands::quota::fetch_claude_quota,
             commands::quota::fetch_kiro_quota,
