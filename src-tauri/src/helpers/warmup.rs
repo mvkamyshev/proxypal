@@ -9,11 +9,7 @@ use crate::config::{get_proxypal_config_dir, load_config};
 
 const TOKEN_URL: &str = "https://auth.openai.com/oauth/token";
 const USAGE_URL: &str = "https://chatgpt.com/backend-api/wham/usage";
-const WARMUP_URL: &str = "https://chatgpt.com/backend-api/codex/responses";
 const CLIENT_ID: &str = "app_EMoamEEZ73f0CkXaXp7hrann";
-const CODEX_USER_AGENT: &str = "codex-cli/1.0.0";
-const UNSUPPORTED_CHATGPT_MODEL_ERROR: &str =
-    "model is not supported when using Codex with a ChatGPT account";
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
@@ -174,25 +170,13 @@ async fn run_codex_warmup_job_inner() -> Result<CodexWarmReport, String> {
         let mut quota_entry = None;
 
         if refreshed {
-            let warmup_result = warmup_account(&client, &mut payload).await;
-            match warmup_result {
-                Ok(_) => {
+            match fetch_quota(&client, &payload).await {
+                Ok(entry) => {
+                    quota_entry = Some(entry);
                     warmed = true;
-                    let _ = atomic_write_json(&path, &payload);
-                }
-                Err(error) if is_nonfatal_chatgpt_model_error(&error) => {
-                    // ChatGPT-bound Codex auth files can legitimately reject explicit model warmup.
-                    // In this case, token refresh + quota fetch is still a successful warm cycle.
-                    warmed = false;
                 }
                 Err(error) => {
                     warm_error = Some(error);
-                }
-            }
-            if warm_error.is_none() {
-                match fetch_quota(&client, &payload).await {
-                    Ok(entry) => quota_entry = Some(entry),
-                    Err(error) => warm_error = Some(error),
                 }
             }
         }
@@ -256,12 +240,6 @@ async fn run_codex_warmup_job_inner() -> Result<CodexWarmReport, String> {
 
     atomic_write_json(&codex_warm_report_path(), &serde_json::to_value(&report).map_err(|e| e.to_string())?)?;
     Ok(report)
-}
-
-fn is_nonfatal_chatgpt_model_error(error: &str) -> bool {
-    error
-        .to_ascii_lowercase()
-        .contains(UNSUPPORTED_CHATGPT_MODEL_ERROR)
 }
 
 pub fn should_run_daily_codex_warmup() -> bool {
@@ -407,70 +385,6 @@ pub(crate) async fn refresh_tokens(
     }
 
     Ok(())
-}
-
-async fn warmup_account(
-    client: &reqwest::Client,
-    payload: &mut serde_json::Value,
-) -> Result<(), String> {
-    let mut response = send_warmup_request(client, payload).await?;
-    if response.status() == reqwest::StatusCode::UNAUTHORIZED {
-        refresh_tokens(client, payload).await?;
-        response = send_warmup_request(client, payload).await?;
-    }
-    if !response.status().is_success() {
-        let status = response.status();
-        let body = response.text().await.unwrap_or_default();
-        return Err(format!("warmup failed ({}): {}", status, truncate(&body)));
-    }
-    Ok(())
-}
-
-async fn send_warmup_request(
-    client: &reqwest::Client,
-    payload: &serde_json::Value,
-) -> Result<reqwest::Response, String> {
-    let access_token = payload
-        .get("access_token")
-        .and_then(|v| v.as_str())
-        .filter(|v| !v.trim().is_empty())
-        .ok_or("missing access_token")?;
-
-    let mut req = client
-        .post(WARMUP_URL)
-        .header(AUTHORIZATION, format!("Bearer {}", access_token.trim()))
-        .header(USER_AGENT, CODEX_USER_AGENT)
-        .header(ACCEPT, "text/event-stream")
-        .json(&serde_json::json!({
-            "model": "gpt-5.2-codex",
-            "instructions": "You are Codex.",
-            "input": [{
-                "type": "message",
-                "role": "user",
-                "content": [{
-                    "type": "input_text",
-                    "text": "Hi"
-                }]
-            }],
-            "tools": [],
-            "tool_choice": "auto",
-            "parallel_tool_calls": false,
-            "reasoning": { "effort": "low" },
-            "store": false,
-            "stream": true
-        }));
-
-    if let Some(account_id) = payload
-        .get("account_id")
-        .and_then(|v| v.as_str())
-        .filter(|v| !v.trim().is_empty())
-    {
-        req = req.header("chatgpt-account-id", account_id.trim());
-    }
-
-    req.send()
-        .await
-        .map_err(|e| format!("warmup request failed: {}", e))
 }
 
 async fn fetch_quota(
