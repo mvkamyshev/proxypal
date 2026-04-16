@@ -1,0 +1,165 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+REMOTE_HOST="${REMOTE_HOST:-maximus-dev}"
+LOCAL_AUTH_DIR="${LOCAL_AUTH_DIR:-$HOME/.cli-proxy-api}"
+REMOTE_AUTH_DIR="${REMOTE_AUTH_DIR:-~/.cli-proxy-api}"
+REMOTE_REPO_DIR="${REMOTE_REPO_DIR:-}"
+CONNECT_TIMEOUT="${CONNECT_TIMEOUT:-8}"
+
+DO_DEPLOY=0
+DRY_RUN=0
+
+usage() {
+  cat <<'EOF'
+Usage: update-codex-accounts [options]
+
+Sync local Codex auth files to remote host and replace remote ones.
+
+Options:
+  --host <ssh-host>         SSH host alias (default: maximus-dev)
+  --local-dir <path>        Local auth dir (default: ~/.cli-proxy-api)
+  --remote-dir <path>       Remote auth dir (default: ~/.cli-proxy-api)
+  --repo-dir <path>         Remote repo dir (auto-detect by default)
+  --deploy                  Also update remote repo to origin/main and rebuild app
+  --dry-run                 Show actions without changing remote files
+  -h, --help                Show this help
+
+Examples:
+  update-codex-accounts
+  update-codex-accounts --deploy
+  update-codex-accounts --host maximus-dev --repo-dir ~/dev/proxypal-src --deploy
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --host)
+      REMOTE_HOST="${2:-}"
+      shift 2
+      ;;
+    --local-dir)
+      LOCAL_AUTH_DIR="${2:-}"
+      shift 2
+      ;;
+    --remote-dir)
+      REMOTE_AUTH_DIR="${2:-}"
+      shift 2
+      ;;
+    --repo-dir)
+      REMOTE_REPO_DIR="${2:-}"
+      shift 2
+      ;;
+    --deploy)
+      DO_DEPLOY=1
+      shift
+      ;;
+    --dry-run)
+      DRY_RUN=1
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --)
+      shift
+      break
+      ;;
+    *)
+      echo "Unknown option: $1" >&2
+      usage
+      exit 2
+      ;;
+  esac
+done
+
+if [[ ! -d "$LOCAL_AUTH_DIR" ]]; then
+  echo "Local auth directory not found: $LOCAL_AUTH_DIR" >&2
+  exit 1
+fi
+
+LOCAL_FILES=()
+while IFS= read -r file; do
+  LOCAL_FILES+=("$file")
+done < <(find "$LOCAL_AUTH_DIR" -maxdepth 1 -type f \( -name 'codex-*.json' -o -name 'codex-*.json.disabled' \) | sort)
+if [[ ${#LOCAL_FILES[@]} -eq 0 ]]; then
+  echo "No local Codex auth files found in $LOCAL_AUTH_DIR" >&2
+  exit 1
+fi
+
+echo "Checking SSH connectivity to $REMOTE_HOST..."
+if ! ssh -o ConnectTimeout="$CONNECT_TIMEOUT" "$REMOTE_HOST" "echo connected" >/dev/null 2>&1; then
+  echo "Cannot connect to $REMOTE_HOST (timeout ${CONNECT_TIMEOUT}s)." >&2
+  exit 1
+fi
+
+RSYNC_ARGS=(
+  -av
+  --delete
+  --chmod=F600,D700
+  --include='codex-*.json'
+  --include='codex-*.json.disabled'
+  --exclude='*'
+)
+if [[ "$DRY_RUN" -eq 1 ]]; then
+  RSYNC_ARGS+=(--dry-run)
+fi
+
+echo "Syncing Codex auth files: $LOCAL_AUTH_DIR -> $REMOTE_HOST:$REMOTE_AUTH_DIR"
+rsync "${RSYNC_ARGS[@]}" "$LOCAL_AUTH_DIR"/ "$REMOTE_HOST:$REMOTE_AUTH_DIR"/
+
+echo "Remote auth file count:"
+ssh "$REMOTE_HOST" "find $REMOTE_AUTH_DIR -maxdepth 1 -type f \\( -name 'codex-*.json' -o -name 'codex-*.json.disabled' \\) | wc -l"
+
+if [[ "$DO_DEPLOY" -eq 1 ]]; then
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    echo "Skipping remote deploy/build because --dry-run is enabled."
+    exit 0
+  fi
+
+  echo "Updating remote repository and rebuilding application..."
+  ssh "$REMOTE_HOST" "bash -s" -- "$REMOTE_REPO_DIR" <<'REMOTE_SCRIPT'
+set -euo pipefail
+
+repo_dir="${1:-}"
+
+if [[ -z "$repo_dir" ]]; then
+  for candidate in "$HOME/dev/proxypal-src" "$HOME/proxypal-src" "$HOME/dev/proxypal" "$HOME/proxypal"; do
+    if [[ -d "$candidate/.git" ]]; then
+      repo_dir="$candidate"
+      break
+    fi
+  done
+fi
+
+if [[ -z "$repo_dir" || ! -d "$repo_dir/.git" ]]; then
+  echo "Remote repo not found. Pass --repo-dir explicitly." >&2
+  exit 1
+fi
+
+cd "$repo_dir"
+
+if [[ -n "$(git status --porcelain)" ]]; then
+  echo "Remote repo has uncommitted changes: $repo_dir" >&2
+  exit 1
+fi
+
+git fetch origin main
+git checkout main
+git pull --ff-only origin main
+
+if ! command -v pnpm >/dev/null 2>&1; then
+  echo "pnpm is not installed on remote host." >&2
+  exit 1
+fi
+
+pnpm install --frozen-lockfile || pnpm install
+ANTIGRAVITY_CLIENT_ID=dummy ANTIGRAVITY_CLIENT_SECRET=dummy pnpm tauri build
+
+echo "Remote build finished in: $repo_dir"
+REMOTE_SCRIPT
+fi
+
+echo "Done."

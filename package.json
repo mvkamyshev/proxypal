@@ -19,7 +19,8 @@
     "check:ts": "node scripts/check-ts.mjs",
     "check:parallel": "node scripts/check-parallel.mjs",
     "check": "pnpm tsc --noEmit && pnpm lint && pnpm format:check",
-    "update-sidecar": "node scripts/update-sidecar.mjs --force"
+    "update-sidecar": "node scripts/update-sidecar.mjs --force",
+    "update-codex-accounts": "./update-codex-accounts"
   },
   "dependencies": {
     "@kobalte/core": "^0.13.11",

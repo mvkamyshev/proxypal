@@ -92,6 +92,22 @@ Build the desktop app:
 pnpm tauri build
 ```
 
+### Sync Codex Auth Files To `maximus-dev`
+
+From project root:
+
+```bash
+./update-codex-accounts
+```
+
+With remote update + rebuild:
+
+```bash
+./update-codex-accounts --deploy
+```
+
+Details: [`docs/UPDATE_CODEX_ACCOUNTS.md`](./docs/UPDATE_CODEX_ACCOUNTS.md)
+
 Linux bundles are written to:
 
 ```bash
